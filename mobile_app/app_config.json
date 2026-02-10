@@ -1,0 +1,4 @@
+{
+  "api_base_url": "http://127.0.0.1:8000",
+  "request_timeout_s": 5.0
+}
