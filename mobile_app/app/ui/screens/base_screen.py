@@ -1,55 +1,56 @@
 from __future__ import annotations
 
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List
 
-from kivy.uix.screenmanager import Screen
 from kivy.properties import ObjectProperty
-from kivy.lang import Builder
+from kivy.uix.screenmanager import Screen
+
 
 class BaseScreen(Screen):
-    """Base for all screens.
+    """Base class for all screens.
 
-    - Defines `container_ids` (list[str])
-    - Implements `mount_container(container_id, widgets)`
-    - Holds references to ScreenManager + Controller for navigation/action dispatch
+    Provides:
+    - controller + screen_manager binding
+    - go() navigation
+    - do() action dispatch
+    - mount_container() for slot-based UI mounting
     """
 
     controller = ObjectProperty(None)
     screen_manager = ObjectProperty(None)
 
-    # override in subclasses
-    container_ids: List[str] = []
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._container_widgets: Dict[str, List[Any]] = {}
+        self._mounted: Dict[str, List[Any]] = {}
 
     def set_nav(self, sm, controller) -> None:
         self.screen_manager = sm
         self.controller = controller
 
     def go(self, screen_name: str) -> None:
-        if self.screen_manager:
-            self.screen_manager.current = screen_name
+        if not self.screen_manager:
+            raise RuntimeError("ScreenManager not set on screen.")
+        self.screen_manager.current = screen_name
 
     def do(self, action_id: str) -> None:
         if not self.controller:
             raise RuntimeError("Controller not set on screen.")
         self.controller.run_action(self, action_id)
 
-    def mount_container(self, container_id: str, widgets: List[Any]) -> None:
-        """Mounts widgets into a container.
-        The container must exist as an `id:` in kv with the same name as container_id (sanitized).
-        """
-        host = self._find_container_widget(container_id)
+    def mount_container(self, kv_id: str, widgets: List[Any]) -> None:
+        """Mount widgets into a KV container by its id."""
+        host = self.ids.get(kv_id)
         if host is None:
-            raise RuntimeError(f"Container widget not found for container_id='{container_id}' in screen '{self.name}'")
+            raise RuntimeError(
+                f"KV container id '{kv_id}' not found on screen '{self.name}'. "
+                f"Check the .kv file ids."
+            )
+
         host.clear_widgets()
         for w in widgets:
             host.add_widget(w)
-        self._container_widgets[container_id] = widgets
 
-    def _find_container_widget(self, container_id: str):
-        # Kivy ids cannot contain ":" reliably; we map ":" -> "__"
-        kid = container_id.replace(":", "__")
-        return self.ids.get(kid)
+        self._mounted[kv_id] = list(widgets)
+
+    def get_container_widgets(self, kv_id: str) -> List[Any]:
+        return list(self._mounted.get(kv_id, []))

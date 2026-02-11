@@ -1,21 +1,21 @@
 from __future__ import annotations
-from typing import List, Optional
 
-from data.services.api_client import ApiClient
+from typing import List
+
 from data.dtos.spot import SpotDTO
+from data.repositories.spots_repository import SpotsRepository
+
 
 class SpotsService:
-    def __init__(self, api: ApiClient):
-        self.api = api
+    """Use-cases around spots."""
+
+    def __init__(self, repo: SpotsRepository):
+        self._repo = repo
 
     def list(self) -> List[SpotDTO]:
-        # Backend endpoint can be adjusted later. Keep it centralized here.
-        data = self.api.get_json("/spots")
-        # Support either {"items":[...]} or plain list
-        items = data.get("items", data) if isinstance(data, dict) else data
-        return [SpotDTO(**x) for x in (items or [])]
+        return self._repo.list()
 
     def create(self, dto: SpotDTO) -> SpotDTO:
-        payload = dto.model_dump(exclude_none=True)
-        data = self.api.post_json("/spots", payload)
-        return SpotDTO(**data) if isinstance(data, dict) else dto
+        new_id = self._repo.create(dto)
+        created = self._repo.get(new_id)
+        return created or SpotDTO(id=new_id, **dto.model_dump(exclude={"id"}, exclude_none=True))

@@ -1,14 +1,20 @@
-"""Import modules that register UI components/actions via decorators.
+"""Import modules that register things via decorators.
 
 Decorators execute at import time, so this is the single place that triggers registration.
-You add new features by creating new modules and adding ONE import here (still no controller edits).
 """
 
+
 def bootstrap_registries() -> None:
-    # Screens
+    # Screens (load kv + classes)
     from ui.screens.home import home_screen  # noqa: F401
     from ui.screens.map import map_screen    # noqa: F401
 
-    # Registrations
+    # UI components/actions
     from ui.registrations import home_ui     # noqa: F401
     from ui.registrations import map_ui      # noqa: F401
+
+    # Service providers (data access)
+    from data.registrations import services  # noqa: F401
+
+    # Controller providers (UI bindings)
+    from core.controllers import spots_controller  # noqa: F401

@@ -1,2 +1,4 @@
 kivy>=2.3.0
 pydantic>=2.7.0
+requests>=2.31.0
+kivy-garden.mapview>=1.0.6

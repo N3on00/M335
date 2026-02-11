@@ -1,18 +1,22 @@
 from __future__ import annotations
 
+import os
+
 from kivy.lang import Builder
+
+from ui.layouts.map_layout import MapLayout
 from ui.screens.base_screen import BaseScreen
 
-Builder.load_file("ui/screens/map/map_screen.kv")
+
+# Load KV rule for this screen (ensures ids like map_header/map_main exist)
+_KV_PATH = os.path.join(os.path.dirname(__file__), "map_screen.kv")
+Builder.load_file(_KV_PATH)
+
 
 class MapScreen(BaseScreen):
-    name = "map"
+    """Map screen."""
 
-    container_ids = [
-        "map:header",
-        "map:main",
-    ]
+    layout_slots = [MapLayout.HEADER, MapLayout.MAIN]
 
     def after_build(self) -> None:
-        # Placeholder hook; later we will initialize MapView here.
-        pass
+        self.do("map.reload")

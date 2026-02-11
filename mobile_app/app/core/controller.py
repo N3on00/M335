@@ -1,40 +1,45 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Optional
 
 from core.context import AppContext
-from core.registry import get_components, get_action
+from core.registry import get_action, get_components
+from ui.screens.base_screen import BaseScreen
 
-@dataclass
-class UIActionContext:
+
+@dataclass(frozen=True)
+class ActionContext:
+    """Context passed to ui_action handlers."""
     app: AppContext
-    screen: Any  # current screen instance
+    screen: BaseScreen
+
 
 class UIController:
-    """Generic controller that wires views from registries.
+    def __init__(self, ctx: AppContext):
+        self._ctx = ctx
 
-    Rule: Views define containers by `container_id` and offer `mount_container(container_id, widgets)`.
-    Controller never needs edits when adding new buttons/widgets: you only add decorators.
-    """
+    def build_screen(self, screen: BaseScreen) -> None:
+        # Defensive: ensure controller is set
+        if screen.controller is None:
+            screen.controller = self
 
-    def __init__(self, app_ctx: AppContext):
-        self.app_ctx = app_ctx
+        # Build all registered containers for this screen
+        for slot in getattr(screen, "layout_slots", []):
+            specs = get_components(slot.key)
+            ctx = ActionContext(app=self._ctx, screen=screen)
+            widgets = [spec.factory(ctx) for spec in specs]
 
-    def build_screen(self, screen: Any) -> None:
-        """Called by Navigation once a screen is instantiated."""
-        # Wire UI components into screen containers
-        for container_id in screen.container_ids:
-            specs = get_components(container_id)
-            widgets = [spec.factory(self.app_ctx) for spec in specs]
-            screen.mount_container(container_id, widgets)
+            # slot.kv_id is the Kivy id of the container
+            screen.mount_container(slot.kv_id, widgets)
 
-        # Let screen do final per-screen initialization if it wants
+        # Call hook after mounting widgets
         if hasattr(screen, "after_build"):
             screen.after_build()
 
-    def run_action(self, screen: Any, action_id: str) -> None:
+    def run_action(self, screen: BaseScreen, action_id: str) -> None:
         spec = get_action(action_id)
         if not spec:
             raise RuntimeError(f"Unknown action_id: {action_id}")
-        spec.handler(UIActionContext(app=self.app_ctx, screen=screen))
+
+        ctx = ActionContext(app=self._ctx, screen=screen)
+        spec.handler(ctx)
