@@ -5,6 +5,8 @@ from typing import Any, Dict, List
 from kivy.properties import ObjectProperty
 from kivy.uix.screenmanager import Screen
 
+from core.layout import LayoutSlot
+
 
 class BaseScreen(Screen):
     """Base class for all screens.
@@ -53,4 +55,9 @@ class BaseScreen(Screen):
         self._mounted[kv_id] = list(widgets)
 
     def get_container_widgets(self, kv_id: str) -> List[Any]:
+        """Return widgets currently mounted into a container by KV id."""
         return list(self._mounted.get(kv_id, []))
+
+    def get_slot_widgets(self, slot: LayoutSlot) -> List[Any]:
+        """Return widgets currently mounted into a container by LayoutSlot."""
+        return self.get_container_widgets(slot.kv_id)

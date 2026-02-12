@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from kivy.app import App
 from kivy.lang import Builder
-
+from ui import registrations
 from app.bootstrap import bootstrap_registries
 from core.context import AppContext
 from core.controller import UIController

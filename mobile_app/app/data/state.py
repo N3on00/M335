@@ -1,48 +1,54 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any, Dict, Optional
 import json
+import os
+from dataclasses import dataclass, field
+from typing import Any, Dict
 
-CONFIG_PATH = Path("app_config.json")
 
-
-@dataclass
+@dataclass(frozen=True)
 class AppConfig:
-    # Backend (FastAPI)
     api_base_url: str = "http://127.0.0.1:8000"
     request_timeout_s: float = 5.0
-
-    # Map defaults
-    map_default_lat: float = 47.0
-    map_default_lon: float = 9.0
-    map_default_zoom: int = 12
-
-    # Optional: custom tile provider (MapView). Leave empty to use OpenStreetMap.
-    # Example (Google Map Tiles API) requires API key + billing:
-    # https://tile.googleapis.com/v1/2dtiles/{z}/{x}/{y}?key=YOUR_KEY
-    map_tile_url: str = ""
-    map_tile_cache_key: str = "osm"
-
-    @classmethod
-    def load(cls) -> "AppConfig":
-        if not CONFIG_PATH.exists():
-            cfg = cls()
-            cfg.save()
-            return cfg
-
-        data = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
-        # Forward compatible: ignore unknown keys, use defaults for missing keys
-        known = {k: data.get(k, getattr(cls, k)) for k in cls.__annotations__.keys()}
-        return cls(**known)
-
-    def save(self) -> None:
-        CONFIG_PATH.write_text(json.dumps(self.__dict__, indent=2), encoding="utf-8")
 
 
 @dataclass
 class AppState:
-    config: AppConfig = field(default_factory=AppConfig.load)
+    """Global app state (KISS).
+
+    - config: backend connectivity
+    - cache: small in-memory cache (counts, last-loaded stuff)
+    - map_config: map view configuration (tiles are best-effort depending on mapview version)
+    """
+
+    config: AppConfig = field(default_factory=AppConfig)
     cache: Dict[str, Any] = field(default_factory=dict)
-    last_error: Optional[str] = None
+
+    # Keep this dict so MapConfig(**map_config) works.
+    map_config: Dict[str, Any] = field(default_factory=lambda: {
+        "default_lat": 47.3769,
+        "default_lon": 8.5417,
+        "default_zoom": 12,
+        "tile_url": None,
+        "tile_cache_key": None,
+    })
+
+    def load_from_file(self, path: str) -> None:
+        if not os.path.exists(path):
+            return
+
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        cfg = data.get("config", {})
+        self.config = AppConfig(
+            api_base_url=str(cfg.get("api_base_url", self.config.api_base_url)),
+            request_timeout_s=float(cfg.get("request_timeout_s", self.config.request_timeout_s)),
+        )
+
+        mc = data.get("map_config", {})
+        if isinstance(mc, dict):
+            # Merge
+            merged = dict(self.map_config)
+            merged.update(mc)
+            self.map_config = merged
