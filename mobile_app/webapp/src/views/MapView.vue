@@ -1,9 +1,11 @@
 <script setup>
-import { useRouter } from 'vue-router'
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import SlotScreenLayout from '../components/layouts/SlotScreenLayout.vue'
 
 const router = useRouter()
-const screenCtx = { router }
+const route = useRoute()
+const screenCtx = computed(() => ({ router, route }))
 </script>
 
 <template>

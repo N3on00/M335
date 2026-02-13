@@ -11,6 +11,18 @@ async function reloadMapData(app) {
   await app.controller('social').reloadFavorites()
 }
 
+function parseFocusRequest(route) {
+  const query = route && typeof route === 'object' ? route.query : null
+  const lat = Number(query?.lat)
+  const lon = Number(query?.lon)
+  const spotId = String(query?.spotId || '').trim()
+  return {
+    lat: Number.isFinite(lat) ? lat : null,
+    lon: Number.isFinite(lon) ? lon : null,
+    spotId,
+  }
+}
+
 registerAction('map.reload', async ({ app }) => {
   await reloadMapData(app)
 })
@@ -28,6 +40,7 @@ registerComponent({
       await reloadMapData(app)
       notify(app, { level: 'success', title: 'Map refreshed', message: 'Spots loaded from backend.' })
     },
+    reloadBusy: app.state.loading.mapReload,
   }),
 })
 
@@ -37,8 +50,9 @@ registerComponent({
   id: 'map.workspace',
   order: 10,
   component: MapWorkspace,
-  buildProps: ({ app, router }) => ({
+  buildProps: ({ app, router, route }) => ({
     state: app.state,
+    focusRequest: parseFocusRequest(route),
     onNotify: (payload) => notify(app, payload),
     onInit: async () => {
       await reloadMapData(app)

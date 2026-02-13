@@ -1,6 +1,7 @@
 <script setup>
 import { computed, useSlots } from 'vue'
 import { firstImageSource } from '../../models/imageMapper'
+import ActionButton from './ActionButton.vue'
 
 const props = defineProps({
   spot: { type: Object, required: true },
@@ -10,10 +11,11 @@ const props = defineProps({
   showVisibilityBadge: { type: Boolean, default: false },
   showFavoriteBadge: { type: Boolean, default: false },
   isFavorite: { type: Boolean, default: false },
+  showGoTo: { type: Boolean, default: false },
   maxTags: { type: Number, default: 4 },
 })
 
-const emit = defineEmits(['open'])
+const emit = defineEmits(['open', 'go-to'])
 const slots = useSlots()
 
 const preview = computed(() => firstImageSource(props.spot?.images))
@@ -49,6 +51,11 @@ function onKeydown(event) {
     event.preventDefault()
     emit('open', props.spot)
   }
+}
+
+function goToSpot(event) {
+  event?.stopPropagation?.()
+  emit('go-to', props.spot)
 }
 </script>
 
@@ -87,18 +94,25 @@ function onKeydown(event) {
           <span class="tag" v-for="tag in visibleTags" :key="`${spot?.id || spot?.title || 'spot'}-${tag}`">{{ tag }}</span>
         </div>
 
-        <div class="spot-card-mini__actions" v-if="$slots.actions">
+        <div class="spot-card-mini__actions" v-if="$slots.actions || showGoTo">
+          <ActionButton
+            v-if="showGoTo"
+            class-name="btn btn-sm btn-outline-primary"
+            icon="bi-signpost-2"
+            label="Go to"
+            @click.stop="goToSpot"
+          />
           <slot name="actions" :spot="spot" />
         </div>
       </div>
 
       <div class="spot-card-mini__rail" v-if="hasTopRail">
         <slot name="top-actions" :spot="spot" />
-        <span class="badge text-bg-light" v-if="showFavoriteBadge && isFavorite">
+        <span class="badge-soft" v-if="showFavoriteBadge && isFavorite">
           <i class="bi bi-heart-fill text-danger me-1"></i>
           Favorite
         </span>
-        <span class="badge text-bg-light" v-if="showVisibilityBadge">{{ spot?.visibility || 'public' }}</span>
+        <span class="badge-soft" v-if="showVisibilityBadge">{{ spot?.visibility || 'public' }}</span>
       </div>
     </div>
   </article>

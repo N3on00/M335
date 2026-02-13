@@ -13,6 +13,7 @@ const props = defineProps({
   onOpenSettings: { type: Function, required: true },
   onOpenProfile: { type: Function, required: true },
   onRefresh: { type: Function, required: true },
+  onGoToSpot: { type: Function, required: true },
   onToggleFavorite: { type: Function, required: true },
   onLoadUserProfile: { type: Function, required: true },
   onNotify: { type: Function, required: true },
@@ -116,6 +117,10 @@ function openOwnerProfile(userId) {
   if (!ownerId) return
   props.onOpenProfile(ownerId)
 }
+
+function goToSpot(spot) {
+  props.onGoToSpot(spot)
+}
 </script>
 
 <template>
@@ -177,7 +182,9 @@ function openOwnerProfile(userId) {
           :owner-label="ownerLabel(spot)"
           :is-favorite="isFavorite(spot)"
           :interactive="true"
+          :show-go-to="true"
           @open="openSpotDetails"
+          @go-to="goToSpot"
         >
           <template #top-actions>
             <div class="spot-card-mini__quick-actions">
@@ -211,6 +218,7 @@ function openOwnerProfile(userId) {
         :can-share="false"
         :on-close="closeSpotDetails"
         :on-toggle-favorite="() => toggleFavoriteForSpot(selectedSpot)"
+        :on-go-to-spot="goToSpot"
         :on-notify="onNotify"
         :on-load-user-profile="onLoadUserProfile"
         :on-open-owner-profile="openOwnerProfile"

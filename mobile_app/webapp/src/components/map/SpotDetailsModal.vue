@@ -18,6 +18,7 @@ const props = defineProps({
   onDelete: { type: Function, default: null },
   onToggleFavorite: { type: Function, required: true },
   onShare: { type: Function, default: null },
+  onGoToSpot: { type: Function, default: null },
   onNotify: { type: Function, required: true },
   onLoadUserProfile: { type: Function, default: null },
   onOpenOwnerProfile: { type: Function, default: null },
@@ -180,6 +181,11 @@ function toggleFavorite() {
   if (!props.canFavorite) return
   props.onToggleFavorite()
 }
+
+function goToSpot() {
+  if (typeof props.onGoToSpot !== 'function') return
+  props.onGoToSpot(props.spot)
+}
 </script>
 
 <template>
@@ -247,6 +253,13 @@ function toggleFavorite() {
 
       <footer class="modal__footer">
         <div class="d-flex flex-wrap gap-2">
+          <ActionButton
+            v-if="typeof onGoToSpot === 'function'"
+            class-name="btn btn-outline-primary"
+            icon="bi-signpost-2"
+            label="Go to"
+            @click="goToSpot"
+          />
           <ActionButton
             class-name="btn btn-outline-warning"
             :icon="isFavorite ? 'bi-heartbreak' : 'bi-heart'"

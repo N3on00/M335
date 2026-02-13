@@ -10,6 +10,12 @@ const props = defineProps({
   createdSpots: { type: Array, default: () => [] },
   favoriteSpots: { type: Array, default: () => [] },
   favorites: { type: Array, default: () => [] },
+  isOwnProfile: { type: Boolean, default: false },
+  isFollowingProfile: { type: Boolean, default: false },
+  followBusy: { type: Boolean, default: false },
+  onFollowProfile: { type: Function, required: true },
+  onUnfollowProfile: { type: Function, required: true },
+  onGoToSpot: { type: Function, required: true },
   onToggleFavorite: { type: Function, required: true },
   onLoadUserProfile: { type: Function, required: true },
   onOpenProfile: { type: Function, required: true },
@@ -133,6 +139,18 @@ function openOwnerProfile(userId) {
   if (!ownerId) return
   props.onOpenProfile(ownerId)
 }
+
+async function followProfile() {
+  await props.onFollowProfile()
+}
+
+async function unfollowProfile() {
+  await props.onUnfollowProfile()
+}
+
+function goToSpot(spot) {
+  props.onGoToSpot(spot)
+}
 </script>
 
 <template>
@@ -153,6 +171,16 @@ function openOwnerProfile(userId) {
             <a v-for="([key, value]) in socialEntries()" :key="`social-${key}`" :href="value" target="_blank" rel="noreferrer noopener">
               {{ key }}
             </a>
+          </div>
+          <div class="d-flex flex-wrap gap-2 mt-2" v-if="!isOwnProfile">
+            <ActionButton
+              :class-name="isFollowingProfile ? 'btn btn-outline-danger' : 'btn btn-primary'"
+              :icon="isFollowingProfile ? 'bi-person-dash' : 'bi-person-plus'"
+              :label="isFollowingProfile ? 'Unfollow' : 'Follow'"
+              :busy="followBusy"
+              busy-label="Saving..."
+              @click="isFollowingProfile ? unfollowProfile() : followProfile()"
+            />
           </div>
         </div>
       </div>
@@ -179,7 +207,9 @@ function openOwnerProfile(userId) {
           :is-favorite="isFavorite(spot)"
           :interactive="true"
           :show-visibility-badge="true"
+          :show-go-to="true"
           @open="openSpotDetails"
+          @go-to="goToSpot"
         >
           <template #top-actions>
             <div class="spot-card-mini__quick-actions">
@@ -210,6 +240,7 @@ function openOwnerProfile(userId) {
         :can-share="false"
         :on-close="closeSpotDetails"
         :on-toggle-favorite="() => toggleFavoriteForSpot(selectedSpot)"
+        :on-go-to-spot="goToSpot"
         :on-notify="onNotify"
         :on-load-user-profile="onLoadUserProfile"
         :on-open-owner-profile="openOwnerProfile"

@@ -7,9 +7,10 @@ const props = defineProps({
   resultCount: { type: Number, default: 0 },
   totalCount: { type: Number, default: 0 },
   canReset: { type: Boolean, default: false },
+  subscriptions: { type: Array, default: () => [] },
 })
 
-const emit = defineEmits(['update:filters', 'reset'])
+const emit = defineEmits(['update:filters', 'reset', 'subscribe', 'apply-subscription', 'remove-subscription'])
 
 function updateField(key, value) {
   const current = props.filters && typeof props.filters === 'object' ? props.filters : {}
@@ -23,6 +24,18 @@ function updateRadius(value) {
   const parsed = Number(value)
   updateField('radiusKm', Number.isFinite(parsed) ? parsed : 0)
 }
+
+function subscribe() {
+  emit('subscribe')
+}
+
+function applySubscription(subscription) {
+  emit('apply-subscription', subscription)
+}
+
+function removeSubscription(subscription) {
+  emit('remove-subscription', subscription?.id)
+}
 </script>
 
 <template>
@@ -33,7 +46,7 @@ function updateRadius(value) {
           <h3 class="h6 mb-1">Search spots</h3>
           <p class="small text-secondary mb-0">Filter by text, tags, profile, visibility, and distance.</p>
         </div>
-        <span class="badge text-bg-light">{{ resultCount }} / {{ totalCount }}</span>
+        <span class="badge-soft">{{ resultCount }} / {{ totalCount }}</span>
       </header>
 
       <div class="map-search-grid">
@@ -110,11 +123,49 @@ function updateRadius(value) {
       </div>
 
       <div class="map-active-location" v-if="activeLocationLabel">
-        <span class="badge text-bg-info">Location: {{ activeLocationLabel }}</span>
+        <span class="badge-soft badge-soft--info">Location: {{ activeLocationLabel }}</span>
       </div>
 
       <div class="d-flex justify-content-end" v-if="canReset">
         <ActionButton class-name="btn btn-sm btn-outline-secondary" label="Reset spot filters" @click="emit('reset')" />
+      </div>
+
+      <section class="d-grid gap-2" v-if="subscriptions.length">
+        <header class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+          <h4 class="h6 mb-0">Filter subscriptions</h4>
+        </header>
+
+        <article class="social-user-row" v-for="sub in subscriptions" :key="`spot-sub-${sub.id}`">
+          <div class="social-user-main">
+            <div>
+              <div class="fw-semibold">{{ sub.label }}</div>
+              <div class="small text-secondary">{{ String(sub.createdAt || '').slice(0, 10) }}</div>
+            </div>
+          </div>
+          <div class="social-user-row__actions">
+            <ActionButton
+              class-name="btn btn-sm btn-outline-primary"
+              icon="bi-funnel"
+              label="Use"
+              @click="applySubscription(sub)"
+            />
+            <ActionButton
+              class-name="btn btn-sm btn-outline-danger"
+              icon="bi-trash"
+              label="Remove"
+              @click="removeSubscription(sub)"
+            />
+          </div>
+        </article>
+      </section>
+
+      <div class="d-flex justify-content-end">
+        <ActionButton
+          class-name="btn btn-sm btn-primary"
+          icon="bi-bell"
+          label="Subscribe this filter"
+          @click="subscribe"
+        />
       </div>
     </div>
   </section>

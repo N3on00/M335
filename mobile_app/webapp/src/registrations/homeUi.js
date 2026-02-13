@@ -79,6 +79,28 @@ registerComponent({
         successMessage: 'Spots and social data updated.',
       })
     },
+    onGoToSpot: (spot) => {
+      const lat = Number(spot?.lat)
+      const lon = Number(spot?.lon)
+      const spotId = String(spot?.id || '').trim()
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+        notify(app, {
+          level: 'warning',
+          title: 'Spot location missing',
+          message: 'This spot has no usable coordinates.',
+        })
+        return
+      }
+
+      router.push({
+        name: 'map',
+        query: {
+          lat: String(lat),
+          lon: String(lon),
+          spotId,
+        },
+      })
+    },
     onToggleFavorite: async (spotId, currentlyFavorite) => {
       const ok = await app.controller('social').toggleFavorite(spotId, currentlyFavorite)
       if (!ok) {

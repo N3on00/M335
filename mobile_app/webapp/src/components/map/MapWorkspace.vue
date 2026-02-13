@@ -8,11 +8,13 @@ import SpotSearchWidget from './SpotSearchWidget.vue'
 import LocationSearchWidget from './LocationSearchWidget.vue'
 import SpotMiniCard from '../common/SpotMiniCard.vue'
 import ActionButton from '../common/ActionButton.vue'
+import { createFilterSubscription, normalizeFilterSubscription } from '../../models/spotSubscriptions'
 
 const SPOT_PAGE_SIZE = 10
 
 const props = defineProps({
   state: { type: Object, required: true },
+  focusRequest: { type: Object, default: () => ({ lat: null, lon: null, spotId: '' }) },
   onInit: { type: Function, required: true },
   onReload: { type: Function, required: true },
   onSaveSpot: { type: Function, required: true },
@@ -70,6 +72,7 @@ const locationSearchError = ref('')
 const locationResults = ref([])
 const activeLocation = ref(null)
 const visibleSpotCount = ref(SPOT_PAGE_SIZE)
+const lastFocusSignature = ref('')
 
 const ownerProfiles = reactive({})
 const ownerLoading = reactive({})
@@ -89,6 +92,14 @@ const editorDraft = reactive({
 const spotFilters = reactive(defaultSpotFilters())
 
 const favoritesSet = computed(() => new Set((props.state.favorites || []).map((id) => String(id))))
+const filterSubscriptions = computed(() => {
+  const source = Array.isArray(props.state.map?.filterSubscriptions)
+    ? props.state.map.filterSubscriptions
+    : []
+  return source
+    .map((entry) => normalizeFilterSubscription(entry))
+    .filter(Boolean)
+})
 
 const selectedSpotIsOwner = computed(() => {
   const meId = String(props.state.session?.user?.id || '').trim()
@@ -206,6 +217,14 @@ watch(
     }
   },
   { deep: true },
+)
+
+watch(
+  () => props.focusRequest,
+  (next) => {
+    applyFocusRequest(next)
+  },
+  { deep: true, immediate: true },
 )
 
 function tokenize(text) {
@@ -326,6 +345,147 @@ function resetSpotFilters() {
   visibleSpotCount.value = SPOT_PAGE_SIZE
 }
 
+function focusSignature(input) {
+  const src = input && typeof input === 'object' ? input : {}
+  const lat = Number(src.lat)
+  const lon = Number(src.lon)
+  const spotId = String(src.spotId || '').trim()
+  return [
+    Number.isFinite(lat) ? lat.toFixed(6) : '',
+    Number.isFinite(lon) ? lon.toFixed(6) : '',
+    spotId,
+  ].join('|')
+}
+
+function applyFocusRequest(input) {
+  const sig = focusSignature(input)
+  if (!sig || sig === '||' || lastFocusSignature.value === sig) {
+    return
+  }
+
+  const src = input && typeof input === 'object' ? input : {}
+  const lat = Number(src.lat)
+  const lon = Number(src.lon)
+  const spotId = String(src.spotId || '').trim()
+
+  if (Number.isFinite(lat) && Number.isFinite(lon)) {
+    props.state.map.center = [lat, lon]
+    props.state.map.zoom = Math.max(14, Number(props.state.map.zoom || 12))
+  }
+
+  if (spotId) {
+    const spot = (Array.isArray(props.state.spots) ? props.state.spots : [])
+      .find((entry) => String(entry?.id || '').trim() === spotId)
+    if (spot) {
+      selectedSpot.value = spot
+      detailsOpen.value = true
+    }
+  }
+
+  lastFocusSignature.value = sig
+}
+
+function currentSubscriptionCenter() {
+  if (activeLocation.value) {
+    return {
+      lat: Number(activeLocation.value.lat),
+      lon: Number(activeLocation.value.lon),
+      label: String(activeLocation.value.label || ''),
+    }
+  }
+
+  const center = Array.isArray(props.state.map?.center) ? props.state.map.center : []
+  if (center.length < 2) return null
+
+  const lat = Number(center[0])
+  const lon = Number(center[1])
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null
+
+  return {
+    lat,
+    lon,
+    label: '',
+  }
+}
+
+function subscribeCurrentFilters() {
+  const sub = createFilterSubscription({
+    filters: spotFilters,
+    center: currentSubscriptionCenter(),
+    label: '',
+  })
+
+  const out = Array.isArray(props.state.map.filterSubscriptions)
+    ? [...props.state.map.filterSubscriptions]
+    : []
+
+  const signature = JSON.stringify({ filters: sub.filters, center: sub.center })
+  const alreadyExists = out
+    .map((entry) => normalizeFilterSubscription(entry))
+    .filter(Boolean)
+    .some((entry) => JSON.stringify({ filters: entry.filters, center: entry.center }) === signature)
+  if (alreadyExists) {
+    props.onNotify({
+      level: 'info',
+      title: 'Already subscribed',
+      message: 'This filter is already in your subscriptions.',
+    })
+    return
+  }
+
+  out.push(sub)
+  props.state.map.filterSubscriptions = out
+
+  props.onNotify({
+    level: 'success',
+    title: 'Filter subscribed',
+    message: `You will be notified about updates for: ${sub.label}`,
+  })
+}
+
+function removeFilterSubscription(subId) {
+  const source = Array.isArray(props.state.map.filterSubscriptions)
+    ? props.state.map.filterSubscriptions
+    : []
+  const next = source.filter((entry) => String(entry?.id || '') !== String(subId || ''))
+  props.state.map.filterSubscriptions = next
+
+  props.onNotify({
+    level: 'info',
+    title: 'Subscription removed',
+    message: 'This map filter subscription was deleted.',
+  })
+}
+
+function applyFilterSubscription(subscription) {
+  const sub = normalizeFilterSubscription(subscription)
+  if (!sub) return
+
+  Object.assign(spotFilters, sanitizeSpotFilters(sub.filters))
+
+  if (sub.center) {
+    activeLocation.value = {
+      id: `sub-${sub.id}`,
+      label: String(sub.center.label || 'Subscribed area'),
+      lat: Number(sub.center.lat),
+      lon: Number(sub.center.lon),
+      type: 'subscription',
+    }
+    props.state.map.center = [Number(sub.center.lat), Number(sub.center.lon)]
+    props.state.map.zoom = Math.max(14, Number(props.state.map.zoom || 12))
+  } else {
+    activeLocation.value = null
+  }
+
+  visibleSpotCount.value = SPOT_PAGE_SIZE
+
+  props.onNotify({
+    level: 'info',
+    title: 'Subscription applied',
+    message: `Applied filter: ${sub.label}`,
+  })
+}
+
 function updateLocationQuery(next) {
   locationQuery.value = String(next || '')
 }
@@ -390,6 +550,18 @@ function onMarkerSelect(spot) {
 }
 
 function openSpotFromList(spot) {
+  selectedSpot.value = spot
+  detailsOpen.value = true
+}
+
+function goToSpot(spot) {
+  const lat = Number(spot?.lat)
+  const lon = Number(spot?.lon)
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return
+
+  props.state.map.center = [lat, lon]
+  props.state.map.zoom = Math.max(14, Number(props.state.map.zoom || 12))
+
   selectedSpot.value = spot
   detailsOpen.value = true
 }
@@ -523,6 +695,7 @@ function loadMoreSpots() {
 onMounted(async () => {
   try {
     await props.onInit()
+    applyFocusRequest(props.focusRequest)
   } catch (e) {
     props.onNotify({
       level: 'error',
@@ -550,7 +723,7 @@ onMounted(async () => {
           label="Reload spots"
           @click="onReload"
         />
-        <span class="badge text-bg-warning" v-if="pickMode">Pick mode active: click map</span>
+        <span class="badge-soft" v-if="pickMode">Pick mode active: click map</span>
       </div>
     </div>
 
@@ -560,8 +733,12 @@ onMounted(async () => {
       :result-count="filteredSpots.length"
       :total-count="state.spots.length"
       :can-reset="hasActiveSpotFilters"
+      :subscriptions="filterSubscriptions"
       @update:filters="updateSpotFilters"
       @reset="resetSpotFilters"
+      @subscribe="subscribeCurrentFilters"
+      @apply-subscription="applyFilterSubscription"
+      @remove-subscription="removeFilterSubscription"
     />
 
     <LocationSearchWidget
@@ -597,7 +774,9 @@ onMounted(async () => {
             :owner-label="ownerLabel(spot)"
             :distance-label="spotDistanceLabel(spot)"
             :interactive="true"
+            :show-go-to="true"
             @open="openSpotFromList"
+            @go-to="goToSpot"
           >
             <template #top-actions>
               <div class="spot-card-mini__quick-actions">
@@ -661,6 +840,7 @@ onMounted(async () => {
       :on-delete="deleteSpot"
       :on-toggle-favorite="toggleFavorite"
       :on-share="shareSpot"
+      :on-go-to-spot="goToSpot"
       :on-notify="onNotify"
       :on-load-user-profile="onLoadUserProfile"
       :on-open-owner-profile="openOwnerProfile"
