@@ -13,7 +13,7 @@ class MongoRepository:
         """Initialize repository with collection and model type"""
         mongo_url = os.getenv("MONGO_URL", "mongodb://localhost:27017")
         self.client = MongoClient(mongo_url)
-        self.db = self.client["witterungsstation"]
+        self.db = self.client["spot_on_sight"]
         self.collection = self.db[collection_name]
         self.model_type = model_type
 
