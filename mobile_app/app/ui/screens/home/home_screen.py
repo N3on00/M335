@@ -18,6 +18,12 @@ class HomeScreen(BaseScreen):
 
     layout_slots = [HomeLayout.HEADER, HomeLayout.MAIN, HomeLayout.FOOTER]
 
+    def on_pre_enter(self, *args):
+        out = super().on_pre_enter(*args)
+        if self.controller:
+            self.controller.build_screen(self)
+        return out
+
     def after_build(self) -> None:
         # Optional autoload
         # self.do("home.refresh")

@@ -13,6 +13,11 @@ Builder.load_file(_KV_PATH)
 class MapScreen(BaseScreen):
     layout_slots = [MapLayout.HEADER, MapLayout.MAIN]
 
+    def on_pre_enter(self, *args):
+        out = super().on_pre_enter(*args)
+        if self.controller:
+            self.do("map.reload")
+        return out
+
     def after_build(self) -> None:
-        self.do("map.bind_interactions")
-        self.do("map.reload")
+        pass

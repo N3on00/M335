@@ -17,11 +17,14 @@ class SpotsController(SpotsPort):
     def create_spot(self, *, title: str, description: str, tags: List[str], lat: float, lon: float, images: List[str]) -> SpotDTO:
         return self._service.create(title=title, description=description, tags=tags, lat=lat, lon=lon, images=images)
 
-    def update_spot(self, *, spot_id: str, title: str, description: str, tags: List[str], lat: float, lon: float, images: List[str]) -> SpotDTO:
+    def update_spot(self, *, spot_id: str, title: str, description: str, tags: List[str], lat: float, lon: float, images: List[str]) -> bool:
         return self._service.update(spot_id=spot_id, title=title, description=description, tags=tags, lat=lat, lon=lon, images=images)
 
     def delete_spot(self, *, spot_id: str) -> bool:
         return self._service.delete(spot_id=spot_id)
+
+    def last_error(self) -> str | None:
+        return self._service.last_error()
 
 
 @controller_provider(interface_id="spots")

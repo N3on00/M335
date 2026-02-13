@@ -1,199 +1,220 @@
 from __future__ import annotations
 
+import os
 import time
 from dataclasses import dataclass
-from typing import Callable, Iterable, Optional
+from typing import Any, Callable, Dict, List, Optional
 
-from kivy.metrics import dp
-from kivy.uix.boxlayout import BoxLayout
+from kivy.clock import Clock
+from kivy_garden.mapview import MapView, MapMarkerPopup
+from kivy_garden.mapview.downloader import Downloader
 
 from data.dtos.spot import SpotDTO
 
-# MapView imports differ across versions. Some versions provide MapMarkerPopup,
-# others only MapMarker. We try both and fail with a clear message if missing.
-try:
-    from kivy_garden.mapview import MapView, MapMarkerPopup  # type: ignore
-    _MarkerBase = MapMarkerPopup
-except Exception:
-    try:
-        from kivy_garden.mapview import MapView, MapMarker  # type: ignore
-        _MarkerBase = MapMarker
-    except Exception as e:
-        raise ImportError(
-            "kivy_garden.mapview is not available. Install it in your venv:\n"
-            "  pip install kivy-garden\n"
-            "  pip install kivy-garden.mapview\n"
-            "If that fails, try:\n"
-            "  python -m pip install kivy_garden.mapview\n"
-        ) from e
+
+def _pick(cfg: Dict[str, Any], *keys: str, default=None):
+    for k in keys:
+        if k in cfg and cfg[k] is not None:
+            return cfg[k]
+    return default
 
 
 @dataclass(frozen=True)
 class MapConfig:
-    default_lat: float = 47.3769
-    default_lon: float = 8.5417
-    default_zoom: int = 12
-    tile_url: str | None = None
-    tile_cache_key: str | None = None
+    lat: float = 47.3769
+    lon: float = 8.5417
+    zoom: int = 13
 
-    # Tap detection tuning
-    tap_max_move_dp: float = 12.0       # movement threshold to still count as tap
-    tap_max_time_s: float = 0.35        # optional time threshold
+    @staticmethod
+    def from_any(cfg: Any) -> "MapConfig":
+        if isinstance(cfg, MapConfig):
+            return cfg
+        if not isinstance(cfg, dict):
+            return MapConfig()
+
+        lat_raw = _pick(cfg, "lat", "default_lat", default=47.3769)
+        lon_raw = _pick(cfg, "lon", "default_lon", default=8.5417)
+        zoom_raw = _pick(cfg, "zoom", "default_zoom", default=13)
+
+        try:
+            lat = 47.3769 if lat_raw is None else float(lat_raw)
+        except (TypeError, ValueError):
+            lat = 47.3769
+
+        try:
+            lon = 8.5417 if lon_raw is None else float(lon_raw)
+        except (TypeError, ValueError):
+            lon = 8.5417
+
+        try:
+            zoom = 13 if zoom_raw is None else int(zoom_raw)
+        except (TypeError, ValueError):
+            zoom = 13
+
+        return MapConfig(lat=lat, lon=lon, zoom=zoom)
 
 
-class SpotMarker(_MarkerBase):
-    """Marker for a spot (works with MapMarkerPopup and MapMarker)."""
-
-    def __init__(
-        self,
-        *,
-        spot: SpotDTO,
-        on_select: Optional[Callable[[SpotDTO], None]] = None,
-    ):
-        super().__init__(lat=float(spot.lat), lon=float(spot.lon))
+class SpotMarker(MapMarkerPopup):
+    def __init__(self, spot: SpotDTO, on_select: Callable[[SpotDTO], None], **kwargs):
+        super().__init__(**kwargs)
         self._spot = spot
         self._on_select = on_select
-        self.bind(on_touch_down=self._on_touch_down)
 
-    def _on_touch_down(self, instance, touch):
-        if self.collide_point(*touch.pos):
-            # Mark touch as "marker interaction" so the map does not treat it as a tap-to-create.
-            touch.ud["spot_marker"] = True
-            if self._on_select:
-                self._on_select(self._spot)
-            return True
-        return False
+    def on_release(self):
+        self._on_select(self._spot)
 
 
-class SpotMapWidget(BoxLayout):
-    """Map widget wrapper for MapScreen.
+class SpotMapWidget(MapView):
+    _TAP_MAX_SECONDS = 0.30
+    _TAP_MAX_PX = 10.0
+    _PAN_CENTER_EPS = 1e-7
 
-    - set_spots(): clears and adds markers
-    - tap on map triggers on_map_tap(lat, lon)
-    - swipe/pan does NOT trigger on_map_tap
-    """
+    def __init__(self, *, cfg: Any, **kwargs):
+        super().__init__(**kwargs)
 
-    def __init__(self, *, cfg: MapConfig, **kwargs):
-        super().__init__(orientation="vertical", **kwargs)
-        self._cfg = cfg
+        mc = MapConfig.from_any(cfg)
+        self.lat = mc.lat
+        self.lon = mc.lon
+        self.zoom = mc.zoom
 
+        self._spots: List[SpotDTO] = []
+        self._markers: List[SpotMarker] = []
         self._on_map_tap: Optional[Callable[[float, float], None]] = None
         self._on_marker_select: Optional[Callable[[SpotDTO], None]] = None
 
-        self.map = MapView(
-            zoom=cfg.default_zoom,
-            lat=cfg.default_lat,
-            lon=cfg.default_lon,
-        )
-        self._apply_config_best_effort(cfg)
+        # Defensive cleanup for corrupt cached tiles
+        Clock.schedule_interval(self._cleanup_bad_tiles, 2.0)
 
-        # Tap detection
-        self._tap_max_move_px = float(dp(cfg.tap_max_move_dp))
-        self.map.bind(on_touch_down=self._on_map_touch_down)
-        self.map.bind(on_touch_up=self._on_map_touch_up)
+    # ----- Public API -----
 
-        self.add_widget(self.map)
+    def set_spots(self, spots: List[SpotDTO]) -> None:
+        self._spots = spots
+        self._render_markers()
 
-    # ---- Public API ----
-
-    def set_on_map_tap(self, cb: Optional[Callable[[float, float], None]]) -> None:
+    def set_on_map_tap(self, cb: Callable[[float, float], None]) -> None:
         self._on_map_tap = cb
 
-    def set_on_marker_select(self, cb: Optional[Callable[[SpotDTO], None]]) -> None:
+    def set_on_marker_select(self, cb: Callable[[SpotDTO], None]) -> None:
         self._on_marker_select = cb
 
-    def center(self) -> tuple[float, float]:
-        return float(self.map.lat), float(self.map.lon)
+    # ----- Interaction -----
 
-    def get_center(self) -> tuple[float, float]:
-        return self.center()
+    @staticmethod
+    def _is_scroll_touch(touch) -> bool:
+        if getattr(touch, "is_mouse_scrolling", False):
+            return True
+        btn = getattr(touch, "button", "")
+        return btn in ("scrollup", "scrolldown", "scrollleft", "scrollright")
 
-    def clear_markers(self) -> None:
-        for child in list(self.map.children):
-            if isinstance(child, _MarkerBase):
-                self.map.remove_widget(child)
+    @staticmethod
+    def _is_primary_mouse_button(touch) -> bool:
+        btn = getattr(touch, "button", "left")
+        return btn == "left"
 
-    def set_spots(self, spots: Iterable[SpotDTO]) -> None:
-        self.clear_markers()
-        for s in spots:
-            if s.lat is None or s.lon is None:
-                continue
-            marker = SpotMarker(spot=s, on_select=self._on_marker_select)
-            self.map.add_widget(marker)
+    def on_touch_down(self, touch):
+        res = super().on_touch_down(touch)
 
-    # ---- Internals ----
+        if not self.collide_point(*touch.pos):
+            return res
 
-    def _apply_config_best_effort(self, cfg: MapConfig) -> None:
-        src = getattr(self.map, "map_source", None) or getattr(self.map, "source", None)
+        if self._is_scroll_touch(touch) or not self._is_primary_mouse_button(touch):
+            touch.ud["sos_tap_candidate"] = False
+            return res
 
-        if cfg.tile_url and src is not None and hasattr(src, "url"):
+        touch.ud["sos_tap_candidate"] = True
+        touch.ud["sos_tap_start_pos"] = tuple(touch.pos)
+        touch.ud["sos_tap_start_time"] = time.perf_counter()
+        touch.ud["sos_tap_start_center"] = (float(self.lat), float(self.lon), int(self.zoom))
+        return res
+
+    def on_touch_move(self, touch):
+        res = super().on_touch_move(touch)
+
+        if not touch.ud.get("sos_tap_candidate"):
+            return res
+
+        sx, sy = touch.ud.get("sos_tap_start_pos", touch.pos)
+        dx = float(touch.pos[0]) - float(sx)
+        dy = float(touch.pos[1]) - float(sy)
+        if (dx * dx + dy * dy) ** 0.5 > self._TAP_MAX_PX:
+            touch.ud["sos_tap_candidate"] = False
+
+        return res
+
+    def on_touch_up(self, touch):
+        res = super().on_touch_up(touch)
+
+        if self._is_scroll_touch(touch):
+            return res
+
+        # If MapView marked it as pan/zoom, ignore as tap
+        mv = touch.ud.get("mapview")
+        if isinstance(mv, dict) and mv.get("mode") in ("pan", "zoom"):
+            return res
+
+        if not touch.ud.get("sos_tap_candidate"):
+            return res
+
+        if not self._is_primary_mouse_button(touch):
+            return res
+
+        started = float(touch.ud.get("sos_tap_start_time", 0.0))
+        if started <= 0.0 or (time.perf_counter() - started) > self._TAP_MAX_SECONDS:
+            return res
+
+        sx, sy = touch.ud.get("sos_tap_start_pos", touch.pos)
+        dx = float(touch.pos[0]) - float(sx)
+        dy = float(touch.pos[1]) - float(sy)
+        if (dx * dx + dy * dy) ** 0.5 > self._TAP_MAX_PX:
+            return res
+
+        start_lat, start_lon, start_zoom = touch.ud.get(
+            "sos_tap_start_center", (float(self.lat), float(self.lon), int(self.zoom))
+        )
+        if int(self.zoom) != int(start_zoom):
+            return res
+        if abs(float(self.lat) - float(start_lat)) > self._PAN_CENTER_EPS:
+            return res
+        if abs(float(self.lon) - float(start_lon)) > self._PAN_CENTER_EPS:
+            return res
+
+        if self.collide_point(*touch.pos) and self._on_map_tap:
+            lat, lon = self.get_latlon_at(*touch.pos)
+            self._on_map_tap(float(lat), float(lon))
+            return True
+
+        return res
+
+    # ----- Internals -----
+
+    def _render_markers(self) -> None:
+        for m in self._markers:
             try:
-                src.url = cfg.tile_url
+                self.remove_marker(m)
             except Exception:
                 pass
+        self._markers.clear()
 
-        if cfg.tile_cache_key and src is not None:
-            for attr in ("cache_key", "cache_key_id"):
-                if hasattr(src, attr):
+        on_select = self._on_marker_select or (lambda _s: None)
+
+        for s in self._spots:
+            mk = SpotMarker(s, on_select=on_select, lat=s.lat, lon=s.lon)
+            self.add_marker(mk)
+            self._markers.append(mk)
+
+    def _cleanup_bad_tiles(self, _dt):
+        cache_dir = getattr(Downloader, "cache_dir", None)
+        if not cache_dir or not os.path.isdir(cache_dir):
+            return
+
+        try:
+            for root, _dirs, files in os.walk(cache_dir):
+                for fn in files:
+                    p = os.path.join(root, fn)
                     try:
-                        setattr(src, attr, cfg.tile_cache_key)
-                        break
+                        if os.path.getsize(p) < 200:
+                            os.remove(p)
                     except Exception:
                         pass
-
-    def _on_map_touch_down(self, instance, touch):
-        if not self.map.collide_point(*touch.pos):
-            return False
-
-        # Track a possible tap
-        touch.ud["tap_start_pos"] = (touch.x, touch.y)
-        touch.ud["tap_start_t"] = time.monotonic()
-        return False
-
-    def _on_map_touch_up(self, instance, touch):
-        if not self.map.collide_point(*touch.pos):
-            return False
-
-        # Do not treat marker clicks as map taps
-        if touch.ud.get("spot_marker"):
-            return False
-
-        if not self._on_map_tap:
-            return False
-
-        start = touch.ud.get("tap_start_pos")
-        start_t = touch.ud.get("tap_start_t")
-        if not start or start_t is None:
-            return False
-
-        dx = float(touch.x - start[0])
-        dy = float(touch.y - start[1])
-        dist2 = dx * dx + dy * dy
-        if dist2 > (self._tap_max_move_px * self._tap_max_move_px):
-            return False
-
-        if (time.monotonic() - float(start_t)) > float(self._cfg.tap_max_time_s):
-            return False
-
-        latlon = self._best_effort_latlon_from_touch(touch)
-        if latlon is None:
-            return False
-
-        lat, lon = latlon
-        self._on_map_tap(float(lat), float(lon))
-        return False
-
-    def _best_effort_latlon_from_touch(self, touch) -> Optional[tuple[float, float]]:
-        fn = getattr(self.map, "get_latlon_at", None)
-        if callable(fn):
-            try:
-                lat, lon = fn(touch.x, touch.y)
-                return float(lat), float(lon)
-            except Exception:
-                pass
-
-        # Fallback: current center
-        try:
-            return self.center()
         except Exception:
-            return None
+            return

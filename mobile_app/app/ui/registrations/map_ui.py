@@ -7,9 +7,11 @@ from kivy.uix.label import Label
 from core.registry import ui_action, ui_component
 from data.dtos.spot import SpotDTO
 from ui.layouts.map_layout import MapLayout
+from ui.widgets.notify_popup import notify
 from ui.widgets.spot_create_popup import SpotDraft, SpotEditorPopup
 from ui.widgets.spot_details_popup import SpotDetailsPopup
 from ui.widgets.spot_map_widget import MapConfig, SpotMapWidget
+from util.crash_reporter import report_exception
 
 
 _PICK_KEY = "spot_location_pick_draft"
@@ -25,29 +27,59 @@ def _get_map_widget(ctx) -> SpotMapWidget:
 
 @ui_action(action_id="map.bind_interactions")
 def map_bind_interactions(ctx):
+    auth = ctx.app.service("auth_service")
+    if not auth.is_authenticated():
+        ctx.screen.go("auth")
+        return
+
     mw = _get_map_widget(ctx)
+    spots = ctx.app.controller("spots")
+
+    def _show_api_error(action: str, err: Exception | None = None):
+        msg = f"{action} failed. Please try again."
+        details = str(err) if err is not None else None
+        if err is not None:
+            report_exception(err, source="map_ui", context={"action": action})
+        notify(title="Backend Error", message=msg, level="error", details=details)
 
     def open_editor(draft: SpotDraft, *, submit_label: str):
         def submit(updated: SpotDraft):
-            if updated.spot_id:
-                ctx.app.controller("spots").update_spot(
-                    spot_id=updated.spot_id,
-                    title=updated.title,
-                    description=updated.description,
-                    tags=updated.tags,
-                    lat=updated.lat,
-                    lon=updated.lon,
-                    images=updated.images_base64,
-                )
-            else:
-                ctx.app.controller("spots").create_spot(
-                    title=updated.title,
-                    description=updated.description,
-                    tags=updated.tags,
-                    lat=updated.lat,
-                    lon=updated.lon,
-                    images=updated.images_base64,
-                )
+            try:
+                if updated.spot_id:
+                    ok = spots.update_spot(
+                        spot_id=updated.spot_id,
+                        title=updated.title,
+                        description=updated.description,
+                        tags=updated.tags,
+                        lat=updated.lat,
+                        lon=updated.lon,
+                        images=updated.images_base64,
+                    )
+                    if not ok:
+                        err = spots.last_error()
+                        _show_api_error("Saving spot", RuntimeError(err) if err else None)
+                        open_editor(updated, submit_label="Save")
+                        return
+                else:
+                    created = spots.create_spot(
+                        title=updated.title,
+                        description=updated.description,
+                        tags=updated.tags,
+                        lat=updated.lat,
+                        lon=updated.lon,
+                        images=updated.images_base64,
+                    )
+                    if not created.id:
+                        err = spots.last_error()
+                        _show_api_error("Creating spot", RuntimeError(err) if err else None)
+                        open_editor(updated, submit_label="Create")
+                        return
+            except Exception as e:
+                _show_api_error("Saving spot", e)
+                open_editor(updated, submit_label="Save" if updated.spot_id else "Create")
+                return
+
+            notify(title="Saved", message="Spot saved successfully.", level="success", auto_close_s=1.5)
             ctx.screen.do("map.reload")
 
         def pick_location(pick_draft: SpotDraft):
@@ -72,7 +104,7 @@ def map_bind_interactions(ctx):
                 lon=float(lon),
                 images_base64=list(pick.images_base64),
             )
-            open_editor(updated, submit_label="Speichern" if updated.spot_id else "Erstellen")
+            open_editor(updated, submit_label="Save" if updated.spot_id else "Create")
             return
 
         draft = SpotDraft(
@@ -84,7 +116,7 @@ def map_bind_interactions(ctx):
             lon=float(lon),
             images_base64=[],
         )
-        open_editor(draft, submit_label="Erstellen")
+        open_editor(draft, submit_label="Create")
 
     def on_marker_select(spot: SpotDTO):
         if not spot.id:
@@ -100,10 +132,15 @@ def map_bind_interactions(ctx):
                 lon=float(spot.lon),
                 images_base64=list(spot.images),
             )
-            open_editor(draft, submit_label="Speichern")
+            open_editor(draft, submit_label="Save")
 
         def on_delete():
-            ctx.app.controller("spots").delete_spot(spot_id=spot.id)
+            ok = spots.delete_spot(spot_id=spot.id)
+            if not ok:
+                err = spots.last_error()
+                _show_api_error("Deleting spot", RuntimeError(err) if err else None)
+                return
+            notify(title="Deleted", message="Spot deleted.", level="info", auto_close_s=1.2)
             ctx.screen.do("map.reload")
 
         SpotDetailsPopup(spot=spot, on_edit=on_edit, on_delete=on_delete).open()
@@ -114,10 +151,19 @@ def map_bind_interactions(ctx):
 
 @ui_action(action_id="map.reload")
 def map_reload(ctx):
+    auth = ctx.app.service("auth_service")
+    if not auth.is_authenticated():
+        ctx.screen.go("auth")
+        return
+
     # Ensure interactions are bound even if after_build timing changes
     ctx.screen.do("map.bind_interactions")
 
-    spots = ctx.app.controller("spots").list_spots()
+    try:
+        spots = ctx.app.controller("spots").list_spots()
+    except Exception as e:
+        notify(title="Backend Error", message="Loading spots failed.", level="error", details=str(e))
+        spots = []
     mw = _get_map_widget(ctx)
     mw.set_spots(spots)
 
@@ -158,4 +204,4 @@ def map_topbar(ctx):
 @ui_component(slot=MapLayout.MAIN, component_id="map.view", order=10)
 def map_view(ctx):
     cfg = ctx.app.state.map_config
-    return SpotMapWidget(cfg=MapConfig(**cfg))
+    return SpotMapWidget(cfg=MapConfig.from_any(cfg))

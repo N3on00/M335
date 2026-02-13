@@ -22,6 +22,15 @@ def _as_str_list(v: Any) -> List[str]:
     return [str(x).strip() for x in v if str(x).strip()]
 
 
+def _as_float(v: Any, default: float = 0.0) -> float:
+    try:
+        if v is None:
+            return default
+        return float(v)
+    except (TypeError, ValueError):
+        return default
+
+
 @dataclass(frozen=True)
 class SpotDTO:
     id: Optional[str]
@@ -39,8 +48,8 @@ class SpotDTO:
             title=str(data.get("title", "")),
             description=str(data.get("description", "")),
             tags=_as_str_list(data.get("tags", [])),
-            lat=float(data.get("lat", 0.0)),
-            lon=float(data.get("lon", 0.0)),
+            lat=_as_float(data.get("lat", 0.0), 0.0),
+            lon=_as_float(data.get("lon", 0.0), 0.0),
             images=_as_str_list(data.get("images", [])),
         )
 

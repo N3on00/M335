@@ -12,8 +12,11 @@ class SpotsPort(Protocol):
     def create_spot(self, *, title: str, description: str, tags: List[str], lat: float, lon: float, images: List[str]) -> SpotDTO:
         raise NotImplementedError
 
-    def update_spot(self, *, spot_id: str, title: str, description: str, tags: List[str], lat: float, lon: float, images: List[str]) -> SpotDTO:
+    def update_spot(self, *, spot_id: str, title: str, description: str, tags: List[str], lat: float, lon: float, images: List[str]) -> bool:
         raise NotImplementedError
 
     def delete_spot(self, *, spot_id: str) -> bool:
+        raise NotImplementedError
+
+    def last_error(self) -> str | None:
         raise NotImplementedError

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.button import Button
 from kivy.uix.label import Label
 
 from core.registry import ui_component
@@ -11,6 +12,30 @@ from ui.layouts.home_layout import HomeLayout
 def home_hero(ctx):
     root = BoxLayout(orientation="vertical", spacing=10, size_hint_y=None)
     root.bind(minimum_height=root.setter("height"))
+
+    auth = ctx.app.service("auth_service")
+    if not auth.is_authenticated():
+        ctx.screen.go("auth")
+        return root
+
+    top = BoxLayout(orientation="horizontal", size_hint_y=None, height="36dp")
+    top.add_widget(Label(text="", size_hint_x=1))
+    logout = Button(
+        text="Logout",
+        size_hint_x=None,
+        width="100dp",
+        background_normal="",
+        background_down="",
+        color=(.2, .25, .23, 1),
+    )
+
+    def _logout(*_):
+        auth.logout()
+        ctx.screen.go("auth")
+
+    logout.bind(on_release=_logout)
+    top.add_widget(logout)
+    root.add_widget(top)
 
     # Logo circle
     logo_row = BoxLayout(orientation="horizontal", size_hint_y=None, height="60dp")
