@@ -1,0 +1,124 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/26.0.7 Chrome/128.0.6613.186 Electron/32.2.5 Safari/537.36" version="26.0.7">
+  <diagram name="SpotOnSight - Klassendiagramm" id="oSvNQfLvx81138pVEarI">
+    <mxGraphModel dx="3088" dy="964" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-1" value="" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=6;strokeColor=#222222;fillColor=#ffffff;fontFamily=Inter,Arial;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-2" value="SpotOnSightApp&#xa;—&#xa;+ build(): Widget" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=6;strokeColor=#222222;fillColor=#ffffff;fontFamily=Inter,Arial;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="1420" width="260" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-3" value="AppContext&#xa;—&#xa;+ state: AppState&#xa;+ services: dict[str, Any]&#xa;+ nav: Navigation" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=6;strokeColor=#222222;fillColor=#ffffff;fontFamily=Inter,Arial;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="1200" width="300" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-4" value="AppState&#xa;—&#xa;+ config: AppConfig&#xa;+ cache: dict[str, Any]&#xa;+ last_error: str?" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=6;strokeColor=#222222;fillColor=#ffffff;fontFamily=Inter,Arial;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="380" y="1210" width="260" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-5" value="AppConfig&#xa;—&#xa;+ api_base_url: str&#xa;+ request_timeout_s: float&#xa;—&#xa;+ load(): AppConfig&#xa;+ save(): void" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=6;strokeColor=#222222;fillColor=#ffffff;fontFamily=Inter,Arial;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="680" y="1190" width="260" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-6" value="Navigation&#xa;—&#xa;- _sm: ScreenManager?&#xa;—&#xa;+ build_screen_manager(controller): ScreenManager&#xa;+ go(name: str): void" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=6;strokeColor=#222222;fillColor=#ffffff;fontFamily=Inter,Arial;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="30" y="970" width="300" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-7" value="UIController&#xa;—&#xa;+ app_ctx: AppContext&#xa;—&#xa;+ build_screen(screen): void&#xa;+ run_action(screen, action_id): void" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=6;strokeColor=#222222;fillColor=#ffffff;fontFamily=Inter,Arial;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="-460" y="1010" width="300" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-8" value="UIActionContext&#xa;—&#xa;+ app: AppContext&#xa;+ screen: BaseScreen" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=6;strokeColor=#222222;fillColor=#ffffff;fontFamily=Inter,Arial;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="-420" y="760" width="260" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-9" value="Registry (Module)&#xa;—&#xa;@ui_component(...)&#xa;@ui_action(...)&#xa;—&#xa;+ get_components(container_id): list[ComponentSpec]&#xa;+ get_action(action_id): ActionSpec?" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=6;strokeColor=#222222;fillColor=#ffffff;fontFamily=Inter,Arial;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="-870" y="995" width="340" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-10" value="ComponentSpec&#xa;—&#xa;+ container_id: str&#xa;+ component_id: str&#xa;+ order: int&#xa;+ factory(ctx): Widget" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=6;strokeColor=#222222;fillColor=#ffffff;fontFamily=Inter,Arial;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="-990" y="1250" width="300" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-11" value="ActionSpec&#xa;—&#xa;+ action_id: str&#xa;+ handler(ctx): void" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=6;strokeColor=#222222;fillColor=#ffffff;fontFamily=Inter,Arial;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="-670" y="1250" width="240" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-12" value="ApiClient&#xa;—&#xa;+ base_url: str&#xa;+ timeout_s: float&#xa;—&#xa;+ get_json(path): Any&#xa;+ post_json(path, payload): Any" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=6;strokeColor=#222222;fillColor=#ffffff;fontFamily=Inter,Arial;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="420" width="300" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-13" value="SpotsService&#xa;—&#xa;+ api: ApiClient&#xa;—&#xa;+ list(): list[SpotDTO]&#xa;+ create(dto: SpotDTO): SpotDTO" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=6;strokeColor=#222222;fillColor=#ffffff;fontFamily=Inter,Arial;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="380" y="420" width="300" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-14" value="DTO (Base)&#xa;—&#xa;+ model_config (pydantic)" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=6;strokeColor=#222222;fillColor=#ffffff;fontFamily=Inter,Arial;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="720" y="420" width="240" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-15" value="SpotDTO : DTO&#xa;—&#xa;+ id: str?&#xa;+ title: str&#xa;+ description: str&#xa;+ lat: float&#xa;+ lon: float&#xa;+ type: str&#xa;+ tags: list[str]&#xa;+ created_at: datetime?" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=6;strokeColor=#222222;fillColor=#ffffff;fontFamily=Inter,Arial;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="720" y="530" width="300" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-16" value="BaseScreen : Screen&#xa;—&#xa;+ container_ids: list[str]&#xa;+ set_nav(sm, controller): void&#xa;+ go(name): void&#xa;+ do(action_id): void&#xa;+ mount_container(container_id, widgets): void&#xa;+ after_build(): void? (hook)" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=6;strokeColor=#222222;fillColor=#ffffff;fontFamily=Inter,Arial;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="20" y="670" width="360" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-17" value="HomeScreen : BaseScreen&#xa;—&#xa;container_ids:&#xa;- home:hero&#xa;- home:actions&#xa;- home:coming_soon" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=6;strokeColor=#222222;fillColor=#ffffff;fontFamily=Inter,Arial;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="370" y="1010" width="260" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-18" value="MapScreen : BaseScreen&#xa;—&#xa;container_ids:&#xa;- map:main&#xa;- map:overlay" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=6;strokeColor=#222222;fillColor=#ffffff;fontFamily=Inter,Arial;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="650" y="1010" width="260" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-19" value="DiscoverScreen : BaseScreen&#xa;—&#xa;container_ids:&#xa;- discover:filters&#xa;- discover:list" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=6;strokeColor=#222222;fillColor=#ffffff;fontFamily=Inter,Arial;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="930" y="980" width="280" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-20" value="DetailScreen : BaseScreen&#xa;—&#xa;container_ids:&#xa;- detail:hero&#xa;- detail:info&#xa;- detail:actions" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=6;strokeColor=#222222;fillColor=#ffffff;fontFamily=Inter,Arial;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1250" y="930" width="280" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-21" style="endArrow=block;endFill=1;strokeColor=#222222;" edge="1" parent="1" source="4vCgUm9s0De6aFKdPmy8-2" target="4vCgUm9s0De6aFKdPmy8-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-22" style="endArrow=diamond;endFill=1;strokeColor=#222222;" edge="1" parent="1" source="4vCgUm9s0De6aFKdPmy8-3" target="4vCgUm9s0De6aFKdPmy8-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-23" style="endArrow=diamond;endFill=1;strokeColor=#222222;" edge="1" parent="1" source="4vCgUm9s0De6aFKdPmy8-3" target="4vCgUm9s0De6aFKdPmy8-6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-24" style="endArrow=diamond;endFill=1;strokeColor=#222222;" edge="1" parent="1" source="4vCgUm9s0De6aFKdPmy8-4" target="4vCgUm9s0De6aFKdPmy8-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-25" style="endArrow=block;endFill=1;strokeColor=#222222;" edge="1" parent="1" source="4vCgUm9s0De6aFKdPmy8-2" target="4vCgUm9s0De6aFKdPmy8-7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-26" style="dashed=1;endArrow=open;endFill=0;strokeColor=#222222;" edge="1" parent="1" source="4vCgUm9s0De6aFKdPmy8-7" target="4vCgUm9s0De6aFKdPmy8-9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-27" style="endArrow=block;endFill=1;strokeColor=#222222;" edge="1" parent="1" source="4vCgUm9s0De6aFKdPmy8-9" target="4vCgUm9s0De6aFKdPmy8-10">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-28" style="endArrow=block;endFill=1;strokeColor=#222222;" edge="1" parent="1" source="4vCgUm9s0De6aFKdPmy8-9" target="4vCgUm9s0De6aFKdPmy8-11">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-29" style="dashed=1;endArrow=open;endFill=0;strokeColor=#222222;" edge="1" parent="1" source="4vCgUm9s0De6aFKdPmy8-7" target="4vCgUm9s0De6aFKdPmy8-8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-30" style="dashed=1;endArrow=open;endFill=0;strokeColor=#222222;" edge="1" parent="1" source="4vCgUm9s0De6aFKdPmy8-6" target="4vCgUm9s0De6aFKdPmy8-16">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-31" style="endArrow=block;endFill=1;strokeColor=#222222;" edge="1" parent="1" source="4vCgUm9s0De6aFKdPmy8-17" target="4vCgUm9s0De6aFKdPmy8-16">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-32" style="endArrow=block;endFill=1;strokeColor=#222222;" edge="1" parent="1" source="4vCgUm9s0De6aFKdPmy8-18" target="4vCgUm9s0De6aFKdPmy8-16">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-33" style="endArrow=block;endFill=1;strokeColor=#222222;" edge="1" parent="1" source="4vCgUm9s0De6aFKdPmy8-19" target="4vCgUm9s0De6aFKdPmy8-16">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-34" style="endArrow=block;endFill=1;strokeColor=#222222;" edge="1" parent="1" source="4vCgUm9s0De6aFKdPmy8-20" target="4vCgUm9s0De6aFKdPmy8-16">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-35" style="endArrow=block;endFill=1;strokeColor=#222222;" edge="1" parent="1" source="4vCgUm9s0De6aFKdPmy8-13" target="4vCgUm9s0De6aFKdPmy8-12">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-36" style="endArrow=block;endFill=1;strokeColor=#222222;" edge="1" parent="1" source="4vCgUm9s0De6aFKdPmy8-13" target="4vCgUm9s0De6aFKdPmy8-15">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-37" style="endArrow=block;endFill=1;strokeColor=#222222;" edge="1" parent="1" source="4vCgUm9s0De6aFKdPmy8-15" target="4vCgUm9s0De6aFKdPmy8-14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4vCgUm9s0De6aFKdPmy8-38" style="dashed=1;endArrow=open;endFill=0;strokeColor=#222222;" edge="1" parent="1" source="4vCgUm9s0De6aFKdPmy8-16" target="4vCgUm9s0De6aFKdPmy8-7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
