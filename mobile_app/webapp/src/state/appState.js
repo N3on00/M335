@@ -1,8 +1,10 @@
 import { reactive } from 'vue'
 import { normalizeUser } from '../models/userMapper'
+import { normalizeFilterSubscription } from '../models/spotSubscriptions'
 
 const SESSION_KEY = 'sos_web_session_v1'
 const THEME_KEY = 'sos_web_theme_v1'
+const FILTER_SUBSCRIPTIONS_KEY = 'sos_map_filter_subscriptions_v1'
 
 function loadSession() {
   try {
@@ -30,9 +32,24 @@ function loadTheme() {
   }
 }
 
+function loadFilterSubscriptions() {
+  try {
+    const raw = localStorage.getItem(FILTER_SUBSCRIPTIONS_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed
+      .map((entry) => normalizeFilterSubscription(entry))
+      .filter(Boolean)
+  } catch {
+    return []
+  }
+}
+
 export function createAppState() {
   const session = loadSession()
   const theme = loadTheme()
+  const filterSubscriptions = loadFilterSubscriptions()
   return reactive({
     config: {
       apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000',
@@ -75,6 +92,7 @@ export function createAppState() {
       zoom: 12,
       draftLat: null,
       draftLon: null,
+      filterSubscriptions,
     },
     profile: {
       current: null,
@@ -100,4 +118,11 @@ export function persistSession(state) {
 
 export function persistTheme(state) {
   localStorage.setItem(THEME_KEY, String(state?.ui?.theme || 'light'))
+}
+
+export function persistFilterSubscriptions(state) {
+  const subs = Array.isArray(state?.map?.filterSubscriptions)
+    ? state.map.filterSubscriptions
+    : []
+  localStorage.setItem(FILTER_SUBSCRIPTIONS_KEY, JSON.stringify(subs))
 }

@@ -9,6 +9,7 @@ import { UsersService } from '../services/usersService'
 import { LocationSearchService } from '../services/locationSearchService'
 import { SupportService } from '../services/supportService'
 import { NotificationService } from '../services/notificationService'
+import { ActivityWatchService } from '../services/activityWatchService'
 import { AuthController } from '../controllers/authController'
 import { SpotsController } from '../controllers/spotsController'
 import { SocialController } from '../controllers/socialController'
@@ -28,6 +29,7 @@ export function buildAppContext() {
     locationSearch: () => new LocationSearchService(),
     supportService: (ctx) => new SupportService(ctx.service('apiClient'), ctx.state),
     notify: (ctx) => new NotificationService(ctx.state),
+    activityWatch: (ctx) => new ActivityWatchService(ctx),
   }
 
   const controllerFactories = {

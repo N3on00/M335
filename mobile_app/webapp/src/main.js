@@ -4,7 +4,7 @@ import AOS from 'aos'
 import { buildAppContext } from './bootstrap/appBootstrap'
 import { APP_CTX_KEY } from './core/injection'
 import { createAppRouter } from './router'
-import { persistSession, persistTheme } from './state/appState'
+import { persistFilterSubscriptions, persistSession, persistTheme } from './state/appState'
 
 import 'bootswatch/dist/flatly/bootstrap.min.css'
 import 'bootstrap-icons/font/bootstrap-icons.css'
@@ -51,6 +51,14 @@ watch(
     applyTheme(appCtx.state.ui.theme)
     persistTheme(appCtx.state)
   },
+)
+
+watch(
+  () => appCtx.state.map.filterSubscriptions,
+  () => {
+    persistFilterSubscriptions(appCtx.state)
+  },
+  { deep: true },
 )
 
 const app = createApp(App)
