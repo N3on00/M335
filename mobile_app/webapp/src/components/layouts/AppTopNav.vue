@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useApp } from '../../core/injection'
 import ActionButton from '../common/ActionButton.vue'
@@ -7,6 +7,7 @@ import ActionButton from '../common/ActionButton.vue'
 const app = useApp()
 const route = useRoute()
 const router = useRouter()
+const extraOpen = ref(false)
 
 const navEntries = computed(() => {
   const meId = String(app.state.session.user?.id || '').trim()
@@ -27,6 +28,14 @@ const incomingCount = computed(() => {
   return list.length
 })
 
+const primaryEntries = computed(() => navEntries.value.slice(0, 3))
+const extraEntries = computed(() => navEntries.value.slice(3))
+
+const hasActiveExtra = computed(() => {
+  const current = String(route.name || '')
+  return extraEntries.value.some((entry) => String(entry.key) === current)
+})
+
 const show = computed(() => {
   if (!app.ui.isAuthenticated()) return false
   return route.name !== 'auth'
@@ -34,6 +43,7 @@ const show = computed(() => {
 
 function open(entry) {
   if (!entry?.to) return
+  extraOpen.value = false
   router.push(entry.to)
 }
 
@@ -50,28 +60,62 @@ function logout() {
   })
   router.push({ name: 'auth' })
 }
+
+function toggleExtraLinks() {
+  extraOpen.value = !extraOpen.value
+}
+
+function openHome() {
+  extraOpen.value = false
+  router.push({ name: 'home' })
+}
 </script>
 
 <template>
   <nav class="app-top-nav card border-0 shadow-sm" v-if="show" data-aos="fade-down">
     <div class="app-top-nav__inner">
-      <div class="app-top-nav__brand">
+      <button class="app-top-nav__brand app-top-nav__brand-button" type="button" aria-label="Go to home" @click="openHome">
         <span class="brand rounded-4"><i class="bi bi-compass-fill"></i></span>
         <div>
           <strong>SpotOnSight</strong>
-          <div class="small text-secondary">Unified navigation</div>
+          <div class="small text-secondary">Navigation</div>
         </div>
-      </div>
+      </button>
 
-      <div class="app-top-nav__links">
-        <ActionButton
-          v-for="entry in navEntries"
-          :key="`app-nav-${entry.key}`"
-          :class-name="isActive(entry) ? 'btn btn-primary app-top-nav__link app-top-nav__link--active' : 'btn btn-outline-secondary app-top-nav__link'"
-          :icon="entry.icon"
-          :label="entry.label"
-          @click="open(entry)"
-        />
+      <div class="app-top-nav__center">
+        <div class="app-top-nav__links app-top-nav__links--primary">
+          <ActionButton
+            v-for="entry in primaryEntries"
+            :key="`app-nav-${entry.key}`"
+            :class-name="isActive(entry) ? 'btn btn-primary app-top-nav__link app-top-nav__link--active' : 'btn btn-outline-secondary app-top-nav__link'"
+            :icon="entry.icon"
+            :label="entry.label"
+            @click="open(entry)"
+          />
+
+          <ActionButton
+            v-if="extraEntries.length"
+            :class-name="(extraOpen || hasActiveExtra)
+              ? 'btn btn-primary app-top-nav__link app-top-nav__link--active'
+              : 'btn btn-outline-secondary app-top-nav__link'"
+            :icon="extraOpen ? 'bi-chevron-up' : 'bi-chevron-down'"
+            label="More"
+            @click="toggleExtraLinks"
+          />
+        </div>
+
+        <Transition name="app-nav-expand">
+          <div class="app-top-nav__links app-top-nav__links--extra" v-if="extraOpen && extraEntries.length">
+            <ActionButton
+              v-for="entry in extraEntries"
+              :key="`app-nav-extra-${entry.key}`"
+              :class-name="isActive(entry) ? 'btn btn-primary app-top-nav__link app-top-nav__link--active' : 'btn btn-outline-secondary app-top-nav__link'"
+              :icon="entry.icon"
+              :label="entry.label"
+              @click="open(entry)"
+            />
+          </div>
+        </Transition>
       </div>
 
       <div class="app-top-nav__tools">
