@@ -1,3 +1,7 @@
 **/.venv/
 **/node_modules/
-**/__pycache__
+**/__pycache__/
+**/*.py[cod]
+.tile_cache/
+cache/
+app/cache/
