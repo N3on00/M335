@@ -207,9 +207,7 @@ function goToSpot(spot) {
           :is-favorite="isFavorite(spot)"
           :interactive="true"
           :show-visibility-badge="true"
-          :show-go-to="true"
           @open="openSpotDetails"
-          @go-to="goToSpot"
         >
           <template #top-actions>
             <div class="spot-card-mini__quick-actions">

@@ -182,9 +182,7 @@ function goToSpot(spot) {
           :owner-label="ownerLabel(spot)"
           :is-favorite="isFavorite(spot)"
           :interactive="true"
-          :show-go-to="true"
           @open="openSpotDetails"
-          @go-to="goToSpot"
         >
           <template #top-actions>
             <div class="spot-card-mini__quick-actions">

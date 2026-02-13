@@ -774,9 +774,7 @@ onMounted(async () => {
             :owner-label="ownerLabel(spot)"
             :distance-label="spotDistanceLabel(spot)"
             :interactive="true"
-            :show-go-to="true"
             @open="openSpotFromList"
-            @go-to="goToSpot"
           >
             <template #top-actions>
               <div class="spot-card-mini__quick-actions">
