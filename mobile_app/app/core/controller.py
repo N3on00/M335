@@ -18,6 +18,9 @@ class UIController:
     def __init__(self, ctx: AppContext):
         self._ctx = ctx
 
+    def is_authenticated(self) -> bool:
+        return bool(self._ctx.state.auth_token)
+
     def build_screen(self, screen: BaseScreen) -> None:
         # Defensive: ensure controller is set
         if screen.controller is None:

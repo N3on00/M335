@@ -18,34 +18,110 @@ class HttpRepoConfig(Generic[T]):
 class BaseHttpRepository(Generic[T]):
     """Generic CRUD repository over the FastAPI backend."""
 
-    def __init__(self, api: ApiClient, cfg: HttpRepoConfig[T]):
+    def __init__(
+        self,
+        api: ApiClient,
+        cfg: HttpRepoConfig[T],
+        auth_token_provider: Optional[Callable[[], Optional[str]]] = None,
+    ):
         self._api = api
         self._cfg = cfg
+        self._last_error: Optional[str] = None
+        self._auth_token_provider = auth_token_provider or (lambda: None)
+
+    def _auth_token(self) -> Optional[str]:
+        try:
+            return self._auth_token_provider()
+        except Exception:
+            return None
+
+    def last_error(self) -> Optional[str]:
+        return self._last_error
+
+    def _set_last_error(self, error: Optional[Exception]) -> None:
+        self._last_error = None if error is None else str(error)
 
     def list(self) -> List[T]:
-        data = self._api.get_json(self._cfg.resource_path)
+        try:
+            data = self._api.get_json(self._cfg.resource_path, auth_token=self._auth_token())
+            self._set_last_error(None)
+        except Exception as e:
+            self._set_last_error(e)
+            return []
+
         if not isinstance(data, list):
-            raise RuntimeError(f"Expected list for GET {self._cfg.resource_path}, got {type(data)}")
-        return [self._cfg.from_json(x) for x in data]
+            return []
+
+        out: List[T] = []
+        for x in data:
+            if not isinstance(x, dict):
+                continue
+            try:
+                out.append(self._cfg.from_json(x))
+            except Exception as e:
+                self._set_last_error(e)
+                continue
+        return out
 
     def get(self, item_id: str) -> Optional[T]:
-        data = self._api.get_json(f"{self._cfg.resource_path}/{item_id}", allow_404=True)
+        try:
+            data = self._api.get_json(
+                f"{self._cfg.resource_path}/{item_id}",
+                allow_404=True,
+                auth_token=self._auth_token(),
+            )
+            self._set_last_error(None)
+        except Exception as e:
+            self._set_last_error(e)
+            return None
+
         if data is None:
             return None
         if not isinstance(data, dict):
-            raise RuntimeError(f"Expected dict for GET item, got {type(data)}")
-        return self._cfg.from_json(data)
+            return None
 
-    def create(self, item: T) -> str:
+        try:
+            return self._cfg.from_json(data)
+        except Exception as e:
+            self._set_last_error(e)
+            return None
+
+    def create(self, item: T) -> Optional[str]:
         payload = self._cfg.to_json(item)
-        data = self._api.post_json(self._cfg.resource_path, payload)
+        try:
+            data = self._api.post_json(self._cfg.resource_path, payload, auth_token=self._auth_token())
+            self._set_last_error(None)
+        except Exception as e:
+            self._set_last_error(e)
+            return None
+
         if not isinstance(data, dict) or "id" not in data:
-            raise RuntimeError(f"Expected {{'id': ...}} for POST {self._cfg.resource_path}, got {data}")
-        return str(data["id"])
+            return None
+        try:
+            return str(data["id"])
+        except Exception as e:
+            self._set_last_error(e)
+            return None
 
-    def update(self, item_id: str, item: T) -> None:
+    def update(self, item_id: str, item: T) -> bool:
         payload = self._cfg.to_json(item)
-        self._api.put_json(f"{self._cfg.resource_path}/{item_id}", payload)
+        try:
+            self._api.put_json(f"{self._cfg.resource_path}/{item_id}", payload, auth_token=self._auth_token())
+            self._set_last_error(None)
+            return True
+        except Exception as e:
+            self._set_last_error(e)
+            return False
 
-    def delete(self, item_id: str) -> None:
-        self._api.delete_json(f"{self._cfg.resource_path}/{item_id}", allow_404=False)
+    def delete(self, item_id: str) -> bool:
+        try:
+            self._api.delete_json(
+                f"{self._cfg.resource_path}/{item_id}",
+                allow_404=True,
+                auth_token=self._auth_token(),
+            )
+            self._set_last_error(None)
+            return True
+        except Exception as e:
+            self._set_last_error(e)
+            return False

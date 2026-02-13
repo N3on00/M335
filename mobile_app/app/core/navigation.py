@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from kivy.uix.screenmanager import ScreenManager
 
+from ui.screens.auth.auth_screen import AuthScreen
 from ui.screens.home.home_screen import HomeScreen
 from ui.screens.map.map_screen import MapScreen
 
@@ -15,17 +16,19 @@ class Navigation:
         self.screen_manager = sm
 
         # Instantiate screens
+        auth = AuthScreen(name="auth")
         home = HomeScreen(name="home")
         map_ = MapScreen(name="map")
 
         # Add screens first
+        sm.add_widget(auth)
         sm.add_widget(home)
         sm.add_widget(map_)
 
         # IMPORTANT: set controller/sm on screen BEFORE building UI (after_build may call actions)
-        for screen in (home, map_):
+        for screen in (auth, home, map_):
             screen.set_nav(sm, controller)
             controller.build_screen(screen)
 
-        sm.current = "home"
+        sm.current = "home" if controller.is_authenticated() else "auth"
         return sm
