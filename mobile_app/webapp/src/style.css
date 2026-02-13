@@ -172,6 +172,66 @@ body {
   gap: 0.95rem;
 }
 
+.app-top-nav {
+  position: sticky;
+  top: 0.6rem;
+  z-index: 1100;
+}
+
+.app-top-nav__inner {
+  padding: 0.62rem;
+  display: grid;
+  gap: 0.62rem;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+}
+
+.app-top-nav__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.app-top-nav__brand strong {
+  font-family: 'Space Grotesk', sans-serif;
+  letter-spacing: 0.01em;
+}
+
+.app-top-nav__links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.app-top-nav__link {
+  min-height: 2.2rem;
+}
+
+.app-top-nav__link--active {
+  box-shadow: 0 8px 22px rgba(31, 124, 114, 0.25);
+}
+
+.app-top-nav__tools {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.app-top-nav__notice {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(var(--bs-primary-rgb), 0.35);
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  background: color-mix(in oklab, var(--app-surface-soft) 78%, var(--app-surface) 22%);
+  color: var(--app-text);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
 .screen--auth {
   max-width: 1020px;
 }
@@ -1238,6 +1298,23 @@ select:-webkit-autofill:focus {
   border: 1px solid rgba(53, 93, 104, 0.12);
 }
 
+.badge-soft {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(var(--bs-primary-rgb), 0.3);
+  border-radius: 999px;
+  padding: 0.2rem 0.52rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--app-text);
+  background: color-mix(in oklab, var(--app-surface-soft) 85%, var(--app-surface) 15%);
+}
+
+.badge-soft--info {
+  border-color: rgba(68, 139, 221, 0.36);
+  background: color-mix(in oklab, var(--app-surface-soft) 76%, rgba(68, 139, 221, 0.24) 24%);
+}
+
 .modal {
   position: fixed;
   inset: 0;
@@ -1530,6 +1607,15 @@ code {
 
   .thumb-actions {
     grid-template-columns: 1fr;
+  }
+
+  .app-top-nav__inner {
+    grid-template-columns: 1fr;
+  }
+
+  .app-top-nav__links,
+  .app-top-nav__tools {
+    justify-content: flex-start;
   }
 
   .thumb-actions .btn {

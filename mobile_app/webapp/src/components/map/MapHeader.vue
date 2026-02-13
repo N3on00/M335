@@ -21,7 +21,7 @@ defineProps({
       <ActionButton
         label="Support"
         icon="bi-life-preserver"
-        class-name="btn btn-outline-primary"
+        class-name="btn btn-outline-secondary"
         @click="onOpenSupport"
       />
       <div class="flex-grow-1">

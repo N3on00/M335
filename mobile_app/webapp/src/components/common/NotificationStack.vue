@@ -53,13 +53,13 @@ async function copyDetails(details) {
     >
       <header class="d-flex align-items-center justify-content-between gap-2 mb-1">
         <h4 class="h6 mb-0">{{ titleOf(n) }}</h4>
-        <ActionButton class-name="btn btn-sm btn-light border" icon="bi-x-lg" :icon-only="true" aria-label="Close notification" @click="close(n.id)" />
+        <ActionButton class-name="btn btn-sm btn-outline-secondary" icon="bi-x-lg" :icon-only="true" aria-label="Close notification" @click="close(n.id)" />
       </header>
       <p class="mb-2 small">{{ messageOf(n) }}</p>
       <div class="d-flex flex-wrap gap-2">
         <ActionButton
           v-if="n.details"
-          class-name="btn btn-sm btn-light border"
+          class-name="btn btn-sm btn-outline-secondary"
           icon="bi-clipboard"
           label="Copy details"
           @click="copyDetails(n.details)"

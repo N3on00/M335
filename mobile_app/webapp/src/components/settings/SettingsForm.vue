@@ -159,7 +159,7 @@ function submit() {
           <p class="text-secondary mb-0">Switch between light and dark mode.</p>
         </div>
         <ActionButton
-          :class-name="isDark ? 'btn btn-light' : 'btn btn-dark'"
+          :class-name="isDark ? 'btn btn-outline-warning' : 'btn btn-outline-secondary'"
           :icon="isDark ? 'bi-sun' : 'bi-moon-stars'"
           :label="isDark ? 'Light mode' : 'Dark mode'"
           @click="onToggleTheme"

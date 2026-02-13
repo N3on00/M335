@@ -79,7 +79,7 @@ function clearActiveLocation() {
       </div>
 
       <div class="map-active-location" v-if="activeLocation">
-        <span class="badge text-bg-info">Active location: {{ activeLocation.label }}</span>
+        <span class="badge-soft badge-soft--info">Active location: {{ activeLocation.label }}</span>
       </div>
     </div>
   </section>

@@ -18,6 +18,9 @@ const emit = defineEmits(['click'])
 function onClick(event) {
   if (props.busy || props.disabled) return
   emit('click', event)
+  if (Number(event?.detail || 0) > 0) {
+    event?.currentTarget?.blur?.()
+  }
 }
 
 function buttonAriaLabel() {

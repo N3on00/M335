@@ -17,7 +17,7 @@ defineProps({
         <p class="lead text-secondary mb-0">Discover, save, and share unique places with your network.</p>
       </div>
       <div class="d-flex flex-wrap gap-2">
-        <ActionButton label="Support" icon="bi-life-preserver" class-name="btn btn-outline-primary" @click="onOpenSupport" />
+        <ActionButton label="Support" icon="bi-life-preserver" class-name="btn btn-outline-secondary" @click="onOpenSupport" />
         <ActionButton label="Logout" icon="bi-box-arrow-right" class-name="btn btn-outline-secondary" @click="onLogout" />
       </div>
     </div>

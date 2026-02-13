@@ -19,9 +19,9 @@ defineProps({
       </div>
       <div class="thumb-actions">
         <ActionButton label="Home" icon="bi-house" class-name="btn btn-outline-secondary" @click="onBackHome" />
-        <ActionButton label="My Profile" icon="bi-person" class-name="btn btn-primary" @click="onOpenMyProfile" />
-        <ActionButton label="Settings" icon="bi-gear" class-name="btn btn-outline-primary" @click="onOpenSettings" />
-        <ActionButton label="Support" icon="bi-life-preserver" class-name="btn btn-outline-primary" @click="onOpenSupport" />
+        <ActionButton label="My Profile" icon="bi-person" class-name="btn btn-outline-secondary" @click="onOpenMyProfile" />
+        <ActionButton label="Settings" icon="bi-gear" class-name="btn btn-outline-secondary" @click="onOpenSettings" />
+        <ActionButton label="Support" icon="bi-life-preserver" class-name="btn btn-outline-secondary" @click="onOpenSupport" />
       </div>
     </div>
   </section>
