@@ -10,7 +10,6 @@ const app = useApp()
 const route = useRoute()
 const router = useRouter()
 
-const extraOpen = ref(false)
 const notificationsOpen = ref(false)
 const userMenuOpen = ref(false)
 const isMobile = ref(false)
@@ -48,20 +47,7 @@ const incomingCount = computed(() => {
   return list.length
 })
 
-const primaryEntries = computed(() => {
-  if (isMobile.value) return navEntries.value.slice(0, 1)
-  return navEntries.value
-})
-
-const subEntries = computed(() => {
-  if (!isMobile.value) return []
-  return navEntries.value.slice(1)
-})
-
-const hasActiveSub = computed(() => {
-  const current = String(route.name || '')
-  return subEntries.value.some((entry) => String(entry.key) === current)
-})
+const primaryEntries = computed(() => navEntries.value)
 
 const show = computed(() => {
   if (!app.ui.isAuthenticated()) return false
@@ -103,7 +89,6 @@ const userDetails = computed(() => {
 watch(
   () => route.fullPath,
   () => {
-    extraOpen.value = false
     notificationsOpen.value = false
     userMenuOpen.value = false
   },
@@ -151,7 +136,7 @@ function scheduleNotificationAnchorSync() {
 }
 
 watch(
-  () => [show.value, isMobile.value, extraOpen.value, notificationsOpen.value, userMenuOpen.value, route.fullPath],
+  () => [show.value, isMobile.value, notificationsOpen.value, userMenuOpen.value, route.fullPath],
   () => {
     scheduleNotificationAnchorSync()
   },
@@ -180,7 +165,6 @@ function closePanels() {
 
 function open(entry) {
   if (!entry?.to) return
-  extraOpen.value = false
   closePanels()
   router.push(entry.to)
 }
@@ -200,14 +184,8 @@ function logout() {
   router.push({ name: 'auth' })
 }
 
-function toggleExtraLinks() {
-  closePanels()
-  extraOpen.value = !extraOpen.value
-}
-
 function openHome() {
   closePanels()
-  extraOpen.value = false
   router.push({ name: 'home' })
 }
 
@@ -272,19 +250,6 @@ function notificationTimestamp(entry) {
       </button>
 
       <div class="app-top-nav__center">
-        <Transition name="app-nav-up-expand">
-          <div class="app-top-nav__links app-top-nav__links--extra" v-if="extraOpen && subEntries.length">
-            <ActionButton
-              v-for="entry in subEntries"
-              :key="`app-nav-sub-${entry.key}`"
-              :class-name="isActive(entry) ? 'btn btn-primary app-top-nav__link app-top-nav__link--active' : 'btn btn-outline-secondary app-top-nav__link'"
-              :icon="entry.icon"
-              :label="entry.label"
-              @click="open(entry)"
-            />
-          </div>
-        </Transition>
-
         <div class="app-top-nav__links app-top-nav__links--primary">
           <ActionButton
             v-for="entry in primaryEntries"
@@ -293,16 +258,6 @@ function notificationTimestamp(entry) {
             :icon="entry.icon"
             :label="entry.label"
             @click="open(entry)"
-          />
-
-          <ActionButton
-            v-if="subEntries.length"
-            :class-name="(extraOpen || hasActiveSub)
-              ? 'btn btn-primary app-top-nav__link app-top-nav__link--active'
-              : 'btn btn-outline-secondary app-top-nav__link'"
-            :icon="extraOpen ? 'bi-chevron-down' : 'bi-chevron-up'"
-            label="Explore"
-            @click="toggleExtraLinks"
           />
         </div>
       </div>
