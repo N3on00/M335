@@ -41,8 +41,3 @@ Treat `webapp/` as the active delivery client and `app/` as historical prototype
 
 - Historical code remains and can create ambiguity if not documented.
 - Dual-client history requires explicit scope statements in docs.
-
-## Assumptions and Missing Evidence
-
-- Exact written rationale for the pivot is not explicitly recorded in ADR/issues text in repository.
-- Therefore, this ADR uses evidence-based inference from commit chronology and code activity distribution.
