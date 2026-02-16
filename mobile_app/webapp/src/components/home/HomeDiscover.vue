@@ -7,10 +7,6 @@ import SpotMiniCard from '../common/SpotMiniCard.vue'
 const props = defineProps({
   spots: { type: Array, default: () => [] },
   favorites: { type: Array, default: () => [] },
-  onOpenMap: { type: Function, required: true },
-  onOpenSocial: { type: Function, required: true },
-  onOpenSupport: { type: Function, required: true },
-  onOpenSettings: { type: Function, required: true },
   onOpenProfile: { type: Function, required: true },
   onRefresh: { type: Function, required: true },
   onGoToSpot: { type: Function, required: true },
@@ -131,48 +127,15 @@ function goToSpot(spot) {
           <h3 class="h4 mb-1">Discover Spots</h3>
           <p class="text-secondary mb-0">Browse all spots in a compact list without opening the map.</p>
         </div>
-      </header>
-
-      <div class="thumb-actions">
-        <ActionButton
-          label="Open map editor"
-          icon="bi-map"
-          class-name="btn btn-primary"
-          @click="onOpenMap"
-        />
-        <ActionButton
-          label="Socials"
-          icon="bi-people"
-          class-name="btn btn-outline-primary"
-          @click="onOpenSocial"
-        />
-        <ActionButton
-          label="Support"
-          icon="bi-life-preserver"
-          class-name="btn btn-outline-primary"
-          @click="onOpenSupport"
-        />
-        <ActionButton
-          label="My profile"
-          icon="bi-person"
-          class-name="btn btn-outline-primary"
-          @click="onOpenProfile"
-        />
-        <ActionButton
-          label="Settings"
-          icon="bi-gear"
-          class-name="btn btn-outline-primary"
-          @click="onOpenSettings"
-        />
         <ActionButton
           label="Refresh spots"
           icon="bi-arrow-repeat"
           :busy="refreshBusy"
           busy-label="Refreshing..."
-          class-name="btn btn-outline-primary"
+          class-name="btn btn-outline-primary btn-sm"
           @click="onRefresh"
         />
-      </div>
+      </header>
 
       <div class="spot-feed" v-if="listedSpots.length">
         <SpotMiniCard

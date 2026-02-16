@@ -46,6 +46,21 @@ watch(
 )
 
 watch(
+  () => appCtx.state.session.token,
+  (token) => {
+    const hasToken = Boolean(String(token || '').trim())
+    if (hasToken) return
+
+    const currentRoute = router.currentRoute.value
+    if (String(currentRoute?.name || '') === 'auth') return
+    if (currentRoute?.meta?.requiresAuth) {
+      void router.replace({ name: 'auth' })
+    }
+  },
+  { immediate: true },
+)
+
+watch(
   () => appCtx.state.ui.theme,
   () => {
     applyTheme(appCtx.state.ui.theme)

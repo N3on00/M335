@@ -12,6 +12,9 @@ onMounted(async () => {
   try {
     await app.ui.runAction('home.refresh')
   } catch (e) {
+    if (!app.ui.isAuthenticated()) {
+      return
+    }
     app.service('notify').push({
       level: 'error',
       title: 'Dashboard load failed',

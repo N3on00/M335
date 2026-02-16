@@ -1498,6 +1498,19 @@ select:-webkit-autofill:focus {
   background: rgba(240, 248, 255, 0.94);
 }
 
+.notify-alert__details {
+  margin: 0;
+  padding: 0.55rem 0.62rem;
+  border-radius: 0.62rem;
+  border: 1px solid rgba(38, 92, 106, 0.22);
+  background: color-mix(in oklab, var(--app-surface-soft) 86%, var(--app-surface) 14%);
+  color: var(--app-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
 .notify-slide-enter-active,
 .notify-slide-leave-active {
   transition: all 250ms ease;
@@ -1567,6 +1580,11 @@ code {
 
 [data-theme='dark'] .notify-alert--info {
   background: rgba(17, 35, 49, 0.95);
+}
+
+[data-theme='dark'] .notify-alert__details {
+  border-color: rgba(122, 173, 188, 0.3);
+  background: rgba(10, 24, 34, 0.72);
 }
 
 @keyframes riseIn {

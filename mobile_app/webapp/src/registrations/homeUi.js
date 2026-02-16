@@ -3,6 +3,7 @@ import HomeHero from '../components/home/HomeHero.vue'
 import HomeDiscover from '../components/home/HomeDiscover.vue'
 import {
   controllerLastError,
+  mergeUniqueDetails,
   notify,
   notifyInfo,
   reloadDashboardData,
@@ -10,13 +11,10 @@ import {
 } from './uiShared'
 
 function _homeSyncErrorDetails(app) {
-  return [
+  return mergeUniqueDetails(
     controllerLastError(app, 'spots'),
     controllerLastError(app, 'social'),
-  ]
-    .map((x) => String(x || '').trim())
-    .filter(Boolean)
-    .join('\n')
+  )
 }
 
 async function _reloadHomeDashboardStrict(app) {
@@ -58,10 +56,6 @@ registerComponent({
     spots: app.state.spots,
     favorites: app.state.favorites,
     refreshBusy: app.state.loading.homeRefresh,
-    onOpenMap: () => router.push('/map'),
-    onOpenSocial: () => router.push('/social'),
-    onOpenSupport: () => router.push('/support'),
-    onOpenSettings: () => router.push('/settings'),
     onOpenProfile: (userId) => {
       const nextId = typeof userId === 'string' && userId.trim()
         ? userId.trim()

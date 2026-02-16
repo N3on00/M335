@@ -1,13 +1,15 @@
 import { createApiError } from './apiErrors'
 
 export class ApiClient {
-  constructor(baseUrl) {
+  constructor(baseUrl, { onUnauthorized } = {}) {
     this.baseUrl = baseUrl
+    this.onUnauthorized = typeof onUnauthorized === 'function' ? onUnauthorized : null
   }
 
   async request(method, path, { body, token, form = false } = {}) {
     const headers = {}
     let payload
+    const hasAuthToken = Boolean(String(token || '').trim())
 
     if (body !== undefined) {
       if (form) {
@@ -46,6 +48,14 @@ export class ApiClient {
         }
 
         if (!res.ok) {
+          if (res.status === 401 && hasAuthToken && this.onUnauthorized) {
+            try {
+              this.onUnauthorized({ status: res.status, method, path: p, data })
+            } catch {
+              // Ignore unauthorized callback failures.
+            }
+          }
+
           throw createApiError({
             status: res.status,
             method,

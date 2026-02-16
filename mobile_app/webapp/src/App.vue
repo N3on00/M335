@@ -26,6 +26,9 @@ onMounted(async () => {
       ])
     }
   } catch (error) {
+    if (!app.ui.isAuthenticated()) {
+      return
+    }
     app.service('notify').push({
       level: 'error',
       title: 'Initial load failed',

@@ -17,6 +17,33 @@ function resolveText(value, fallback, ...args) {
   return toDetails(fallback)
 }
 
+function splitDetailLines(value) {
+  const text = toDetails(value)
+  if (!text) return []
+
+  return text
+    .split(/\r?\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+}
+
+export function mergeUniqueDetails(...values) {
+  const merged = []
+  const seen = new Set()
+
+  for (const value of values) {
+    const lines = splitDetailLines(value)
+    for (const line of lines) {
+      const key = line.toLowerCase()
+      if (seen.has(key)) continue
+      seen.add(key)
+      merged.push(line)
+    }
+  }
+
+  return merged.join('\n')
+}
+
 export function notify(app, payload) {
   app.service('notify').push(payload)
 }
@@ -92,6 +119,15 @@ function _endLoading(app, key) {
   app.state.loading[key] = app.state.loadingCounts[key] > 0
 }
 
+function _authState(app) {
+  if (!app?.ui || typeof app.ui.isAuthenticated !== 'function') return false
+  return app.ui.isAuthenticated()
+}
+
+function _authDropped(app, wasAuthenticated) {
+  return Boolean(wasAuthenticated && !_authState(app))
+}
+
 export function observeAction(app, {
   loadingKey = '',
   errorTitle = 'Action failed',
@@ -104,6 +140,7 @@ export function observeAction(app, {
   onSuccess,
 }, action) {
   return async (...args) => {
+    const wasAuthenticated = _authState(app)
     _beginLoading(app, loadingKey)
     try {
       const result = await action(...args)
@@ -136,6 +173,10 @@ export function observeAction(app, {
 
       return result
     } catch (error) {
+      if (_authDropped(app, wasAuthenticated)) {
+        return null
+      }
+
       const details = toDetails(resolve(errorDetails, error) || error?.message || error)
       notifyError(
         app,
@@ -171,6 +212,7 @@ export async function runTask(app, {
   successLevel = 'success',
   onSuccess,
 }) {
+  const wasAuthenticated = _authState(app)
   _beginLoading(app, loadingKey)
   try {
     const result = await task()
@@ -188,6 +230,10 @@ export async function runTask(app, {
     }
     return { ok: true, result }
   } catch (error) {
+    if (_authDropped(app, wasAuthenticated)) {
+      return { ok: false, error, authDropped: true }
+    }
+
     const details = toDetails(resolve(errorDetails, error) || error?.message || error)
     notifyError(
       app,
