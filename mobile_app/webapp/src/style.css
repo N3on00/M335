@@ -2079,7 +2079,7 @@ code {
 
   .app-top-nav__tools {
     justify-content: flex-end;
-    align-self: start;
+    align-self: end;
   }
 
   .app-top-nav__link {
