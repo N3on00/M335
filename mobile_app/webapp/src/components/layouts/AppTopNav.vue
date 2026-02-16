@@ -18,9 +18,9 @@ const panelRoot = ref(null)
 
 const navEntries = computed(() => {
   return [
-    { key: 'home', label: 'Home', icon: 'bi-house', to: { name: 'home' } },
-    { key: 'map', label: 'Map', icon: 'bi-map', to: { name: 'map' } },
     { key: 'social', label: 'Social', icon: 'bi-people', to: { name: 'social' } },
+    { key: 'map', label: 'Map', icon: 'bi-map', to: { name: 'map' } },
+    { key: 'home', label: 'Home', icon: 'bi-house', to: { name: 'home' } },
   ]
 })
 
