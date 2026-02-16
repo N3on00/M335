@@ -478,20 +478,6 @@ body {
   font-size: 2rem;
 }
 
-.app-avatar-picker__overlay {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(180deg, rgba(15, 36, 46, 0), rgba(15, 36, 46, 0.72));
-  color: #f4fbff;
-  font-size: 0.69rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  padding: 0.22rem 0.32rem;
-  text-align: center;
-}
-
 .app-avatar-picker__meta {
   min-width: 0;
 }

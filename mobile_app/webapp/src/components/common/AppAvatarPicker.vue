@@ -77,7 +77,6 @@ function clearImage() {
         <span class="app-avatar-picker__image app-avatar-picker__image--empty" v-else>
           <i class="bi bi-person"></i>
         </span>
-        <span class="app-avatar-picker__overlay">{{ previewSrc ? 'Change photo' : 'Upload photo' }}</span>
       </button>
 
       <div class="app-avatar-picker__meta">
