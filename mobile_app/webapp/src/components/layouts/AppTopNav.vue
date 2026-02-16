@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useApp } from '../../core/injection'
 import { toImageSource } from '../../models/imageMapper'
@@ -14,6 +14,8 @@ const extraOpen = ref(false)
 const notificationsOpen = ref(false)
 const userMenuOpen = ref(false)
 const isMobile = ref(false)
+const navRoot = ref(null)
+const panelRoot = ref(null)
 
 const navEntries = computed(() => {
   return [
@@ -97,12 +99,57 @@ watch(
 function updateViewportMode() {
   if (typeof window === 'undefined') return
   isMobile.value = window.matchMedia('(max-width: 900px)').matches
+  syncNotificationAnchor()
 }
+
+function applyMobileOverlayHeight(value = 0) {
+  if (typeof document === 'undefined') return
+  const px = Math.max(0, Math.ceil(Number(value) || 0))
+  document.documentElement.style.setProperty('--app-mobile-nav-overlay-height', `${px}px`)
+}
+
+function syncNotificationAnchor() {
+  if (typeof window === 'undefined') return
+
+  if (!show.value || !isMobile.value || !navRoot.value) {
+    applyMobileOverlayHeight(0)
+    return
+  }
+
+  const navRect = navRoot.value.getBoundingClientRect()
+  let top = navRect.top
+
+  if ((notificationsOpen.value || userMenuOpen.value) && panelRoot.value) {
+    const panelRect = panelRoot.value.getBoundingClientRect()
+    top = Math.min(top, panelRect.top)
+  }
+
+  const overlayHeight = window.innerHeight - top
+  applyMobileOverlayHeight(overlayHeight)
+}
+
+function scheduleNotificationAnchorSync() {
+  nextTick(() => {
+    syncNotificationAnchor()
+    if (typeof window !== 'undefined') {
+      window.requestAnimationFrame(() => syncNotificationAnchor())
+    }
+  })
+}
+
+watch(
+  () => [show.value, isMobile.value, extraOpen.value, notificationsOpen.value, userMenuOpen.value, route.fullPath],
+  () => {
+    scheduleNotificationAnchorSync()
+  },
+  { immediate: true },
+)
 
 onMounted(() => {
   updateViewportMode()
   if (typeof window !== 'undefined') {
     window.addEventListener('resize', updateViewportMode)
+    scheduleNotificationAnchorSync()
   }
 })
 
@@ -110,6 +157,7 @@ onBeforeUnmount(() => {
   if (typeof window !== 'undefined') {
     window.removeEventListener('resize', updateViewportMode)
   }
+  applyMobileOverlayHeight(0)
 })
 
 function closePanels() {
@@ -200,7 +248,7 @@ function notificationTimestamp(entry) {
 </script>
 
 <template>
-  <nav class="app-top-nav card border-0 shadow-sm" v-if="show" data-aos="fade-down">
+  <nav class="app-top-nav card border-0 shadow-sm" v-if="show" data-aos="fade-down" ref="navRoot">
     <div class="app-top-nav__inner">
       <button class="app-top-nav__brand app-top-nav__brand-button" type="button" aria-label="Go to home" @click="openHome">
         <span class="brand rounded-4"><i class="bi bi-compass-fill"></i></span>
@@ -267,7 +315,7 @@ function notificationTimestamp(entry) {
     </div>
 
     <Transition name="app-nav-expand">
-      <div class="app-top-nav__panel" v-if="notificationsOpen || userMenuOpen">
+      <div class="app-top-nav__panel" ref="panelRoot" v-if="notificationsOpen || userMenuOpen">
         <section class="card border-0 shadow-sm app-top-nav__panel-card" v-if="notificationsOpen">
           <div class="app-top-nav__panel-header">
             <h4 class="h6 mb-0">Notification log</h4>

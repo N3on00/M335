@@ -1,11 +1,11 @@
 import { registerAction, registerComponent } from '../core/registry'
 import HomeHero from '../components/home/HomeHero.vue'
+import HomeMapWidget from '../components/home/HomeMapWidget.vue'
 import HomeDiscover from '../components/home/HomeDiscover.vue'
 import {
   controllerLastError,
   mergeUniqueDetails,
   notify,
-  notifyInfo,
   reloadDashboardData,
   runTask,
 } from './uiShared'
@@ -25,6 +25,40 @@ async function _reloadHomeDashboardStrict(app) {
   }
 }
 
+function _openMap(router, { lat = null, lon = null, spotId = '' } = {}) {
+  const query = {}
+  if (Number.isFinite(lat) && Number.isFinite(lon)) {
+    query.lat = String(lat)
+    query.lon = String(lon)
+  }
+
+  const sid = String(spotId || '').trim()
+  if (sid) {
+    query.spotId = sid
+  }
+
+  router.push({
+    name: 'map',
+    query,
+  })
+}
+
+function _goToSpot(app, router, spot) {
+  const lat = Number(spot?.lat)
+  const lon = Number(spot?.lon)
+  const spotId = String(spot?.id || '').trim()
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    notify(app, {
+      level: 'warning',
+      title: 'Spot location missing',
+      message: 'This spot has no usable coordinates.',
+    })
+    return
+  }
+
+  _openMap(router, { lat, lon, spotId })
+}
+
 registerAction('home.refresh', async ({ app }) => {
   await _reloadHomeDashboardStrict(app)
 })
@@ -35,14 +69,29 @@ registerComponent({
   id: 'home.hero',
   order: 10,
   component: HomeHero,
-  buildProps: ({ app, router }) => ({
+  buildProps: ({ app }) => ({
     username: app.state.session.user?.display_name || app.state.session.user?.username || '',
-    onOpenSupport: () => router.push('/support'),
-    onLogout: () => {
-      app.controller('auth').logout()
-      notifyInfo(app, 'Logged out', 'Session ended.')
-      router.push('/auth')
+  }),
+})
+
+registerComponent({
+  screen: 'home',
+  slot: 'main',
+  id: 'home.map-widget',
+  order: 8,
+  component: HomeMapWidget,
+  buildProps: ({ app, router }) => ({
+    spots: app.state.spots,
+    onOpenMap: (focus = null) => {
+      const src = focus && typeof focus === 'object' ? focus : {}
+      const lat = Number(src.lat)
+      const lon = Number(src.lon)
+      _openMap(router, {
+        lat: Number.isFinite(lat) ? lat : null,
+        lon: Number.isFinite(lon) ? lon : null,
+      })
     },
+    onOpenSpot: (spot) => _goToSpot(app, router, spot),
   }),
 })
 
@@ -73,28 +122,7 @@ registerComponent({
         successMessage: 'Spots and social data updated.',
       })
     },
-    onGoToSpot: (spot) => {
-      const lat = Number(spot?.lat)
-      const lon = Number(spot?.lon)
-      const spotId = String(spot?.id || '').trim()
-      if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
-        notify(app, {
-          level: 'warning',
-          title: 'Spot location missing',
-          message: 'This spot has no usable coordinates.',
-        })
-        return
-      }
-
-      router.push({
-        name: 'map',
-        query: {
-          lat: String(lat),
-          lon: String(lon),
-          spotId,
-        },
-      })
-    },
+    onGoToSpot: (spot) => _goToSpot(app, router, spot),
     onToggleFavorite: async (spotId, currentlyFavorite) => {
       const ok = await app.controller('social').toggleFavorite(spotId, currentlyFavorite)
       if (!ok) {

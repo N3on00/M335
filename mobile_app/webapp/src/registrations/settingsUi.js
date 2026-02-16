@@ -21,12 +21,6 @@ registerComponent({
   id: 'settings.hero',
   order: 10,
   component: SettingsHero,
-  buildProps: ({ app, router }) => ({
-    onBackHome: () => router.push('/home'),
-    onOpenSocial: () => router.push('/social'),
-    onOpenSupport: () => router.push('/support'),
-    onOpenProfile: () => router.push(`/profile/${app.state.session.user?.id || ''}`),
-  }),
 })
 
 registerComponent({

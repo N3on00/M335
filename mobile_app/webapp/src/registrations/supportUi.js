@@ -9,11 +9,6 @@ registerComponent({
   id: 'support.hero',
   order: 10,
   component: SupportHero,
-  buildProps: ({ router }) => ({
-    onBackHome: () => router.push('/home'),
-    onOpenSocial: () => router.push('/social'),
-    onOpenSettings: () => router.push('/settings'),
-  }),
 })
 
 registerComponent({

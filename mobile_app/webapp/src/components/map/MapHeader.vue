@@ -2,8 +2,6 @@
 import ActionButton from '../common/ActionButton.vue'
 
 defineProps({
-  onBack: { type: Function, required: true },
-  onOpenSupport: { type: Function, required: true },
   onReload: { type: Function, required: true },
   reloadBusy: { type: Boolean, default: false },
 })
@@ -12,18 +10,6 @@ defineProps({
 <template>
   <section class="card border-0 shadow-sm map-header" data-aos="fade-down">
     <div class="card-body d-grid d-md-flex align-items-md-center gap-3 p-3 p-md-4">
-      <ActionButton
-        label="Back"
-        icon="bi-arrow-left"
-        class-name="btn btn-outline-secondary"
-        @click="onBack"
-      />
-      <ActionButton
-        label="Support"
-        icon="bi-life-preserver"
-        class-name="btn btn-outline-secondary"
-        @click="onOpenSupport"
-      />
       <div class="flex-grow-1">
         <h2 class="h3 mb-1">Explore Map</h2>
         <p class="text-secondary mb-0">Create, edit, favorite and share spots.</p>

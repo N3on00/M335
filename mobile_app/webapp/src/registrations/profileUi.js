@@ -40,12 +40,6 @@ registerComponent({
   id: 'profile.hero',
   order: 10,
   component: ProfileHero,
-  buildProps: ({ router }) => ({
-    onBack: () => router.back(),
-    onOpenSocial: () => router.push('/social'),
-    onOpenSupport: () => router.push('/support'),
-    onOpenSettings: () => router.push('/settings'),
-  }),
 })
 
 registerComponent({

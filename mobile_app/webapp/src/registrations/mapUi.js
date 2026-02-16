@@ -33,9 +33,7 @@ registerComponent({
   id: 'map.header',
   order: 10,
   component: MapHeader,
-  buildProps: ({ app, router }) => ({
-    onBack: () => router.push('/home'),
-    onOpenSupport: () => router.push('/support'),
+  buildProps: ({ app }) => ({
     onReload: async () => {
       await reloadMapData(app)
       notify(app, { level: 'success', title: 'Map refreshed', message: 'Spots loaded from backend.' })

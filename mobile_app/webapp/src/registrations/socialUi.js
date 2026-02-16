@@ -14,12 +14,6 @@ registerComponent({
   id: 'social.hero',
   order: 10,
   component: SocialHero,
-  buildProps: ({ app, router }) => ({
-    onBackHome: () => router.push('/home'),
-    onOpenSettings: () => router.push('/settings'),
-    onOpenSupport: () => router.push('/support'),
-    onOpenMyProfile: () => router.push(`/profile/${app.state.session.user?.id || ''}`),
-  }),
 })
 
 registerComponent({
