@@ -1,9 +1,9 @@
 <script setup>
 import { computed, reactive, watch } from 'vue'
 import ActionButton from '../common/ActionButton.vue'
+import AppAvatarPicker from '../common/AppAvatarPicker.vue'
 import AppCheckbox from '../common/AppCheckbox.vue'
 import AppTextField from '../common/AppTextField.vue'
-import { toImageSource } from '../../models/imageMapper'
 
 const props = defineProps({
   user: { type: Object, default: null },
@@ -23,7 +23,7 @@ const form = reactive({
   followRequiresApproval: false,
   instagram: '',
   github: '',
-  website: '',
+  websites: [''],
   currentPassword: '',
   newPassword: '',
   confirmNewPassword: '',
@@ -80,6 +80,92 @@ const canSubmitPasswordChange = computed(() => {
   )
 })
 
+const hasAnyWebsite = computed(() => {
+  return form.websites.some((value) => String(value || '').trim())
+})
+
+function normalizeWebsiteList(values) {
+  const source = Array.isArray(values) ? values : []
+  const out = []
+  const seen = new Set()
+
+  for (const value of source) {
+    const url = String(value || '').trim()
+    if (!url) continue
+    const key = url.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(url)
+  }
+
+  return out
+}
+
+function websitesFromSocialAccounts(source) {
+  if (!source || typeof source !== 'object') return ['']
+
+  const websiteEntries = Object.entries(source)
+    .filter(([key, value]) => {
+      const normalizedKey = String(key || '').trim().toLowerCase()
+      const normalizedValue = String(value || '').trim()
+      if (!normalizedValue) return false
+      return normalizedKey === 'website' || normalizedKey.startsWith('website_')
+    })
+    .sort(([leftKey], [rightKey]) => {
+      const left = String(leftKey || '').trim().toLowerCase()
+      const right = String(rightKey || '').trim().toLowerCase()
+
+      if (left === 'website') return -1
+      if (right === 'website') return 1
+
+      const leftNum = Number(left.replace('website_', '')) || 0
+      const rightNum = Number(right.replace('website_', '')) || 0
+      return leftNum - rightNum
+    })
+    .map(([, value]) => String(value || '').trim())
+
+  const normalized = normalizeWebsiteList(websiteEntries)
+  return normalized.length ? normalized : ['']
+}
+
+function addWebsiteField() {
+  form.websites.push('')
+}
+
+function removeWebsiteField(index) {
+  form.websites = form.websites.filter((_, current) => current !== index)
+  if (!form.websites.length) {
+    form.websites = ['']
+  }
+}
+
+function updateWebsite(index, value) {
+  form.websites[index] = String(value || '')
+}
+
+function addWebsitesToBio() {
+  const websites = normalizeWebsiteList(form.websites)
+  if (!websites.length) return
+
+  const lines = String(form.bio || '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+
+  const existing = new Set(lines.map((line) => line.toLowerCase()))
+  let changed = false
+  for (const site of websites) {
+    if (existing.has(site.toLowerCase())) continue
+    lines.push(site)
+    existing.add(site.toLowerCase())
+    changed = true
+  }
+
+  if (changed) {
+    form.bio = lines.join('\n')
+  }
+}
+
 watch(
   () => props.user,
   (user) => {
@@ -94,7 +180,7 @@ watch(
     const social = u.social_accounts && typeof u.social_accounts === 'object' ? u.social_accounts : {}
     form.instagram = String(social.instagram || '')
     form.github = String(social.github || '')
-    form.website = String(social.website || '')
+    form.websites = websitesFromSocialAccounts(social)
 
     form.currentPassword = ''
     form.newPassword = ''
@@ -103,35 +189,23 @@ watch(
   { immediate: true, deep: true },
 )
 
-function readFileAsBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onerror = () => reject(new Error('Could not read image file'))
-    reader.onload = () => {
-      const out = String(reader.result || '')
-      const idx = out.indexOf(',')
-      resolve(idx >= 0 ? out.slice(idx + 1) : out)
-    }
-    reader.readAsDataURL(file)
-  })
-}
-
-async function onAvatarSelect(event) {
-  const file = event?.target?.files?.[0]
-  if (!file) return
-  try {
-    form.avatarImage = await readFileAsBase64(file)
-  } catch {
-    form.avatarImage = ''
-  }
-  if (event.target) {
-    event.target.value = ''
-  }
-}
-
 function submit() {
   if (!canSubmitPasswordChange.value) {
     return
+  }
+
+  const websites = normalizeWebsiteList(form.websites)
+
+  const socialAccounts = {
+    instagram: String(form.instagram || '').trim(),
+    github: String(form.github || '').trim(),
+  }
+
+  if (websites[0]) {
+    socialAccounts.website = websites[0]
+  }
+  for (let index = 1; index < websites.length; index += 1) {
+    socialAccounts[`website_${index + 1}`] = websites[index]
   }
 
   props.onSave({
@@ -141,11 +215,7 @@ function submit() {
     bio: form.bio,
     avatarImage: form.avatarImage,
     followRequiresApproval: form.followRequiresApproval,
-    socialAccounts: {
-      instagram: form.instagram,
-      github: form.github,
-      website: form.website,
-    },
+    socialAccounts,
     currentPassword: form.currentPassword,
     newPassword: form.newPassword,
   })
@@ -211,7 +281,7 @@ function submit() {
       />
 
       <div class="row g-2">
-        <div class="col-12 col-md-4">
+        <div class="col-12 col-md-6">
           <AppTextField
             label="Instagram"
             v-model="form.instagram"
@@ -219,7 +289,7 @@ function submit() {
             :disabled="busy"
           />
         </div>
-        <div class="col-12 col-md-4">
+        <div class="col-12 col-md-6">
           <AppTextField
             label="GitHub"
             v-model="form.github"
@@ -227,21 +297,56 @@ function submit() {
             :disabled="busy"
           />
         </div>
-        <div class="col-12 col-md-4">
-          <AppTextField
-            label="Website"
-            v-model="form.website"
-            placeholder="https://..."
-            :disabled="busy"
-          />
-        </div>
       </div>
 
-      <div>
-        <label class="form-label">Profile picture</label>
-        <input class="form-control" type="file" accept="image/png,image/jpeg,image/webp" :disabled="busy" @change="onAvatarSelect" />
-        <div class="settings-avatar-preview" v-if="form.avatarImage">
-          <img :src="toImageSource(form.avatarImage)" alt="avatar preview" loading="lazy" />
+      <AppAvatarPicker
+        label="Profile picture"
+        v-model="form.avatarImage"
+        :disabled="busy"
+      />
+
+      <div class="settings-websites">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+          <label class="form-label mb-0">Websites</label>
+          <ActionButton
+            class-name="btn btn-sm btn-outline-secondary"
+            icon="bi-plus"
+            label="Add website"
+            :disabled="busy"
+            @click="addWebsiteField"
+          />
+        </div>
+
+        <div class="settings-websites__list">
+          <div class="settings-websites__item" v-for="(value, index) in form.websites" :key="`website-${index}`">
+            <AppTextField
+              bare
+              class-name="form-control"
+              :model-value="value"
+              :placeholder="index === 0 ? 'https://...' : 'Additional website URL'"
+              :disabled="busy"
+              :aria-label="`Website ${index + 1}`"
+              @update:modelValue="(next) => updateWebsite(index, next)"
+            />
+            <ActionButton
+              class-name="btn btn-outline-secondary"
+              icon="bi-x"
+              :icon-only="true"
+              aria-label="Remove website"
+              :disabled="busy || form.websites.length <= 1"
+              @click="removeWebsiteField(index)"
+            />
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-end">
+          <ActionButton
+            class-name="btn btn-sm btn-outline-primary"
+            icon="bi-journal-plus"
+            label="Add websites to bio"
+            :disabled="busy || !hasAnyWebsite"
+            @click="addWebsitesToBio"
+          />
         </div>
       </div>
 

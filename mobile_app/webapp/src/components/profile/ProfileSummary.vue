@@ -20,6 +20,7 @@ const props = defineProps({
   onLoadUserProfile: { type: Function, required: true },
   onOpenProfile: { type: Function, required: true },
   onNotify: { type: Function, required: true },
+  onEditProfile: { type: Function, default: null },
 })
 
 const activeTab = ref('created')
@@ -151,6 +152,11 @@ async function unfollowProfile() {
 function goToSpot(spot) {
   props.onGoToSpot(spot)
 }
+
+function editOwnProfile() {
+  if (typeof props.onEditProfile !== 'function') return
+  props.onEditProfile()
+}
 </script>
 
 <template>
@@ -171,6 +177,14 @@ function goToSpot(spot) {
             <a v-for="([key, value]) in socialEntries()" :key="`social-${key}`" :href="value" target="_blank" rel="noreferrer noopener">
               {{ key }}
             </a>
+          </div>
+          <div class="d-flex flex-wrap gap-2 mt-2" v-if="isOwnProfile">
+            <ActionButton
+              class-name="btn btn-outline-primary"
+              icon="bi-pencil-square"
+              label="Edit profile"
+              @click="editOwnProfile"
+            />
           </div>
           <div class="d-flex flex-wrap gap-2 mt-2" v-if="!isOwnProfile">
             <ActionButton

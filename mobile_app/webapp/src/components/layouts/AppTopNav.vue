@@ -34,6 +34,13 @@ const logEntries = computed(() => {
 
 const logCount = computed(() => logEntries.value.length)
 
+const userTriggerClass = computed(() => {
+  if (userMenuOpen.value) {
+    return 'btn btn-primary app-top-nav__tool-btn app-top-nav__user-trigger-btn app-top-nav__user-trigger--active'
+  }
+  return 'btn btn-outline-secondary app-top-nav__tool-btn app-top-nav__user-trigger-btn'
+})
+
 const incomingCount = computed(() => {
   const list = Array.isArray(app.state.social?.incomingRequests)
     ? app.state.social.incomingRequests
@@ -69,6 +76,12 @@ const userAvatar = computed(() => {
 
 const userTitle = computed(() => {
   return String(me.value?.display_name || me.value?.username || 'Your account')
+})
+
+const userNavName = computed(() => {
+  const username = String(me.value?.username || '').trim()
+  if (username) return `@${username}`
+  return String(me.value?.display_name || 'Profile')
 })
 
 const userSubtitle = computed(() => {
@@ -304,13 +317,20 @@ function notificationTimestamp(entry) {
           @click="toggleNotifications"
         />
         <ActionButton
-          :class-name="userMenuOpen ? 'btn btn-primary app-top-nav__tool-btn' : 'btn btn-outline-secondary app-top-nav__tool-btn'"
-          icon="bi-person-circle"
-          :label="isMobile ? '' : userTitle"
-          :icon-only="isMobile"
+          :class-name="userTriggerClass"
           aria-label="Open user menu"
           @click="toggleUserMenu"
-        />
+        >
+          <span class="app-top-nav__user-trigger">
+            <span class="app-top-nav__user-avatar" v-if="userAvatar">
+              <img :src="userAvatar" alt="profile avatar" loading="lazy" />
+            </span>
+            <span class="app-top-nav__user-avatar app-top-nav__user-avatar--empty" v-else>
+              <i class="bi bi-person"></i>
+            </span>
+            <span class="app-top-nav__user-name">{{ userNavName }}</span>
+          </span>
+        </ActionButton>
       </div>
     </div>
 

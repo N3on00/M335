@@ -163,6 +163,9 @@ registerComponent({
     onOpenProfile: (userId) => {
       router.push(`/profile/${userId}`)
     },
+    onEditProfile: () => {
+      router.push('/settings')
+    },
     onNotify: (payload) => notify(app, payload),
   }),
 })
