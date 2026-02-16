@@ -211,6 +211,19 @@ function notificationTimestamp(entry) {
       </button>
 
       <div class="app-top-nav__center">
+        <Transition name="app-nav-up-expand">
+          <div class="app-top-nav__links app-top-nav__links--extra" v-if="extraOpen && subEntries.length">
+            <ActionButton
+              v-for="entry in subEntries"
+              :key="`app-nav-sub-${entry.key}`"
+              :class-name="isActive(entry) ? 'btn btn-primary app-top-nav__link app-top-nav__link--active' : 'btn btn-outline-secondary app-top-nav__link'"
+              :icon="entry.icon"
+              :label="entry.label"
+              @click="open(entry)"
+            />
+          </div>
+        </Transition>
+
         <div class="app-top-nav__links app-top-nav__links--primary">
           <ActionButton
             v-for="entry in primaryEntries"
@@ -226,24 +239,11 @@ function notificationTimestamp(entry) {
             :class-name="(extraOpen || hasActiveSub)
               ? 'btn btn-primary app-top-nav__link app-top-nav__link--active'
               : 'btn btn-outline-secondary app-top-nav__link'"
-            :icon="extraOpen ? 'bi-chevron-up' : 'bi-chevron-down'"
+            :icon="extraOpen ? 'bi-chevron-down' : 'bi-chevron-up'"
             label="Explore"
             @click="toggleExtraLinks"
           />
         </div>
-
-        <Transition name="app-nav-expand">
-          <div class="app-top-nav__links app-top-nav__links--extra" v-if="extraOpen && subEntries.length">
-            <ActionButton
-              v-for="entry in subEntries"
-              :key="`app-nav-sub-${entry.key}`"
-              :class-name="isActive(entry) ? 'btn btn-primary app-top-nav__link app-top-nav__link--active' : 'btn btn-outline-secondary app-top-nav__link'"
-              :icon="entry.icon"
-              :label="entry.label"
-              @click="open(entry)"
-            />
-          </div>
-        </Transition>
       </div>
 
       <div class="app-top-nav__tools">

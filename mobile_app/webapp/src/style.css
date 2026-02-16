@@ -242,8 +242,8 @@ body {
 }
 
 .app-top-nav__links--extra {
-  padding-top: 0.36rem;
-  border-top: 1px solid rgba(var(--bs-primary-rgb), 0.16);
+  padding-bottom: 0.34rem;
+  border-bottom: 1px solid rgba(var(--bs-primary-rgb), 0.16);
 }
 
 .app-top-nav__link--active {
@@ -327,6 +327,17 @@ body {
 .app-nav-expand-leave-to {
   opacity: 0;
   transform: translateY(-4px);
+}
+
+.app-nav-up-expand-enter-active,
+.app-nav-up-expand-leave-active {
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+
+.app-nav-up-expand-enter-from,
+.app-nav-up-expand-leave-to {
+  opacity: 0;
+  transform: translateY(4px);
 }
 
 .screen--auth {
@@ -1824,7 +1835,8 @@ code {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.3rem;
-    padding-top: 0.28rem;
+    padding-top: 0;
+    padding-bottom: 0.28rem;
   }
 
   .app-top-nav__tools {
