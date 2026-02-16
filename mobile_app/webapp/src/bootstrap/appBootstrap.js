@@ -22,6 +22,8 @@ function resetAuthenticatedState(state) {
   state.session.user = null
   state.spots = []
   state.favorites = []
+  state.notifications = []
+  state.notificationLog = []
 
   for (const key of Object.keys(state.loading || {})) {
     state.loading[key] = false

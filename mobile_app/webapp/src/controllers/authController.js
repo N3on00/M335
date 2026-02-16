@@ -25,6 +25,8 @@ export class AuthController extends BaseController {
   logout() {
     this.service().logout()
     this.ctx.state.favorites = []
+    this.ctx.state.notifications = []
+    this.ctx.state.notificationLog = []
     persistSession(this.ctx.state)
   }
 

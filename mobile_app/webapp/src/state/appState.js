@@ -59,6 +59,7 @@ export function createAppState() {
     spots: [],
     favorites: [],
     notifications: [],
+    notificationLog: [],
     loading: {
       authLogin: false,
       authRegister: false,

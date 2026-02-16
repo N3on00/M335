@@ -16,11 +16,21 @@ export class NotificationService {
     const id = seq++
     const entry = {
       id,
+      createdAt: new Date().toISOString(),
       level: String(level || 'info'),
       title: String(title || '').trim(),
       message: String(message || '').trim(),
       details: String(details || ''),
     }
+
+    if (!Array.isArray(this.state.notificationLog)) {
+      this.state.notificationLog = []
+    }
+    this.state.notificationLog.push(entry)
+    if (this.state.notificationLog.length > 200) {
+      this.state.notificationLog = this.state.notificationLog.slice(-200)
+    }
+
     this.state.notifications.push(entry)
 
     if (!sticky) {
@@ -48,5 +58,9 @@ export class NotificationService {
       this._timers.delete(id)
     }
     this.state.notifications = this.state.notifications.filter((n) => n.id !== id)
+  }
+
+  clearLog() {
+    this.state.notificationLog = []
   }
 }
