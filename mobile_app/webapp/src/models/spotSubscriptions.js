@@ -14,6 +14,20 @@ function sanitizeRadius(value) {
   return Math.max(0, Number(value) || 0)
 }
 
+function sanitizeSnapshot(value) {
+  const src = value && typeof value === 'object' ? value : {}
+  const out = {}
+
+  for (const [rawId, rawSignature] of Object.entries(src)) {
+    const id = sanitizeText(rawId)
+    const signature = sanitizeText(rawSignature)
+    if (!id || !signature) continue
+    out[id] = signature
+  }
+
+  return out
+}
+
 function sanitizeCenter(center) {
   const src = center && typeof center === 'object' ? center : null
   if (!src) return null
@@ -74,10 +88,93 @@ function defaultLabel(filters, center) {
   return parts.join(' | ') || 'All visible spots'
 }
 
-export function createFilterSubscription({ label = '', filters = {}, center = null } = {}) {
+function spotSnapshotSignature(spot) {
+  const src = spot && typeof spot === 'object' ? spot : {}
+
+  const tags = Array.isArray(src.tags)
+    ? src.tags.map((tag) => sanitizeText(tag).toLowerCase()).filter(Boolean).sort()
+    : []
+
+  const images = Array.isArray(src.images)
+    ? src.images.map((image) => sanitizeText(image)).filter(Boolean)
+    : []
+
+  const inviteUserIds = Array.isArray(src.invite_user_ids)
+    ? src.invite_user_ids.map((id) => sanitizeText(id)).filter(Boolean).sort()
+    : []
+
+  const lat = Number(src.lat)
+  const lon = Number(src.lon)
+
+  return JSON.stringify({
+    owner_id: sanitizeText(src.owner_id),
+    title: sanitizeText(src.title),
+    description: sanitizeText(src.description),
+    tags,
+    lat: Number.isFinite(lat) ? Number(lat.toFixed(6)) : null,
+    lon: Number.isFinite(lon) ? Number(lon.toFixed(6)) : null,
+    visibility: sanitizeText(src.visibility || 'public'),
+    images,
+    invite_user_ids: inviteUserIds,
+    created_at: sanitizeText(src.created_at),
+    updated_at: sanitizeText(src.updated_at),
+  })
+}
+
+export function createSubscriptionSnapshot(spots = []) {
+  const list = Array.isArray(spots) ? spots : []
+  const out = {}
+
+  for (const spot of list) {
+    const id = sanitizeText(spot?.id)
+    if (!id) continue
+    out[id] = spotSnapshotSignature(spot)
+  }
+
+  return out
+}
+
+export function diffSubscriptionSnapshot(previousSnapshot, nextSnapshot) {
+  const previous = sanitizeSnapshot(previousSnapshot)
+  const next = sanitizeSnapshot(nextSnapshot)
+
+  const addedIds = []
+  const changedIds = []
+  const removedIds = []
+
+  for (const [id, signature] of Object.entries(next)) {
+    if (!(id in previous)) {
+      addedIds.push(id)
+      continue
+    }
+    if (previous[id] !== signature) {
+      changedIds.push(id)
+    }
+  }
+
+  for (const id of Object.keys(previous)) {
+    if (!(id in next)) {
+      removedIds.push(id)
+    }
+  }
+
+  return {
+    addedIds,
+    changedIds,
+    removedIds,
+  }
+}
+
+export function snapshotsEqual(previousSnapshot, nextSnapshot) {
+  const { addedIds, changedIds, removedIds } = diffSubscriptionSnapshot(previousSnapshot, nextSnapshot)
+  return addedIds.length === 0 && changedIds.length === 0 && removedIds.length === 0
+}
+
+export function createFilterSubscription({ label = '', filters = {}, center = null, snapshot = {} } = {}) {
   const normalizedFilters = sanitizeFilters(filters)
   const normalizedCenter = sanitizeCenter(center)
   const normalizedLabel = sanitizeText(label) || defaultLabel(normalizedFilters, normalizedCenter)
+  const normalizedSnapshot = sanitizeSnapshot(snapshot)
 
   return {
     id: `sub-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -85,6 +182,7 @@ export function createFilterSubscription({ label = '', filters = {}, center = nu
     label: normalizedLabel,
     filters: normalizedFilters,
     center: normalizedCenter,
+    snapshot: normalizedSnapshot,
   }
 }
 
@@ -98,6 +196,7 @@ export function normalizeFilterSubscription(input) {
   const center = sanitizeCenter(input.center)
   const label = sanitizeText(input.label) || defaultLabel(filters, center)
   const createdAt = sanitizeText(input.createdAt) || new Date().toISOString()
+  const snapshot = sanitizeSnapshot(input.snapshot)
 
   return {
     id,
@@ -105,6 +204,7 @@ export function normalizeFilterSubscription(input) {
     label,
     filters,
     center,
+    snapshot,
   }
 }
 

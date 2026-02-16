@@ -8,7 +8,11 @@ import SpotSearchWidget from './SpotSearchWidget.vue'
 import LocationSearchWidget from './LocationSearchWidget.vue'
 import SpotMiniCard from '../common/SpotMiniCard.vue'
 import ActionButton from '../common/ActionButton.vue'
-import { createFilterSubscription, normalizeFilterSubscription } from '../../models/spotSubscriptions'
+import {
+  createFilterSubscription,
+  createSubscriptionSnapshot,
+  normalizeFilterSubscription,
+} from '../../models/spotSubscriptions'
 
 const SPOT_PAGE_SIZE = 10
 
@@ -409,10 +413,13 @@ function currentSubscriptionCenter() {
 }
 
 function subscribeCurrentFilters() {
+  const baselineSnapshot = createSubscriptionSnapshot(filteredSpots.value)
+
   const sub = createFilterSubscription({
     filters: spotFilters,
     center: currentSubscriptionCenter(),
     label: '',
+    snapshot: baselineSnapshot,
   })
 
   const out = Array.isArray(props.state.map.filterSubscriptions)
@@ -439,7 +446,8 @@ function subscribeCurrentFilters() {
   props.onNotify({
     level: 'success',
     title: 'Filter subscribed',
-    message: `You will be notified about updates for: ${sub.label}`,
+    message: `Saved current result (${Object.keys(baselineSnapshot).length} spots) for: ${sub.label}`,
+    details: 'You will only get alerts for newly matching spots or changed matching spots.',
   })
 }
 

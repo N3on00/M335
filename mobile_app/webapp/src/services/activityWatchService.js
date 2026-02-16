@@ -1,4 +1,10 @@
-import { normalizeFilterSubscription, subscriptionMatchesSpot } from '../models/spotSubscriptions'
+import {
+  createSubscriptionSnapshot,
+  diffSubscriptionSnapshot,
+  normalizeFilterSubscription,
+  snapshotsEqual,
+  subscriptionMatchesSpot,
+} from '../models/spotSubscriptions'
 
 const POLL_MS = 22000
 
@@ -12,10 +18,6 @@ function requestIdOf(entry) {
   return `${followerId}|${created}`
 }
 
-function spotIdOf(spot) {
-  return String(spot?.id || '').trim()
-}
-
 export class ActivityWatchService {
   constructor(ctx) {
     this.ctx = ctx
@@ -24,7 +26,6 @@ export class ActivityWatchService {
     this._seeded = false
     this._followerIds = new Set()
     this._requestIds = new Set()
-    this._subMatches = new Map()
   }
 
   start() {
@@ -45,7 +46,6 @@ export class ActivityWatchService {
     this._seeded = false
     this._followerIds.clear()
     this._requestIds.clear()
-    this._subMatches.clear()
   }
 
   async tick({ notify = true } = {}) {
@@ -119,41 +119,42 @@ export class ActivityWatchService {
         const allSpots = Array.isArray(app.state.spots) ? app.state.spots : []
         const favoritesSet = new Set((app.state.favorites || []).map((id) => String(id)))
 
-        const activeIds = new Set()
+        const nextSubscriptions = []
+        let subscriptionsUpdated = subscriptions.length !== rawSubs.length
+
         for (const sub of subscriptions) {
-          activeIds.add(sub.id)
-          const currentMatchIds = new Set(
-            allSpots
-              .filter((spot) => subscriptionMatchesSpot(sub, spot, favoritesSet))
-              .map((spot) => spotIdOf(spot))
-              .filter(Boolean),
-          )
+          const matchedSpots = allSpots.filter((spot) => subscriptionMatchesSpot(sub, spot, favoritesSet))
+          const nextSnapshot = createSubscriptionSnapshot(matchedSpots)
+          const previousSnapshot = sub.snapshot || {}
 
-          if (notify && this._seeded) {
-            const prev = this._subMatches.get(sub.id) || new Set()
-            let newCount = 0
-            for (const sid of currentMatchIds) {
-              if (!prev.has(sid)) newCount += 1
-            }
-            if (newCount > 0) {
-              notifyService.push({
-                level: 'success',
-                title: 'Subscription update',
-                message: `${newCount} new spot(s) matched: ${sub.label}`,
-              })
-            }
+          const { addedIds, changedIds } = diffSubscriptionSnapshot(previousSnapshot, nextSnapshot)
+          const hasPreviousSnapshot = Object.keys(previousSnapshot).length > 0
+
+          if (notify && this._seeded && hasPreviousSnapshot && (addedIds.length || changedIds.length)) {
+            const changeSummary = []
+            if (addedIds.length) changeSummary.push(`${addedIds.length} new`)
+            if (changedIds.length) changeSummary.push(`${changedIds.length} changed`)
+
+            notifyService.push({
+              level: 'success',
+              title: 'Subscription update',
+              message: `${changeSummary.join(', ')} spot(s): ${sub.label}`,
+            })
           }
 
-          this._subMatches.set(sub.id, currentMatchIds)
+          if (!snapshotsEqual(previousSnapshot, nextSnapshot)) {
+            subscriptionsUpdated = true
+          }
+
+          nextSubscriptions.push({
+            ...sub,
+            snapshot: nextSnapshot,
+          })
         }
 
-        for (const subId of [...this._subMatches.keys()]) {
-          if (!activeIds.has(subId)) {
-            this._subMatches.delete(subId)
-          }
+        if (subscriptionsUpdated) {
+          app.state.map.filterSubscriptions = nextSubscriptions
         }
-      } else {
-        this._subMatches.clear()
       }
 
       this._seeded = true
