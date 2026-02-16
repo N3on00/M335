@@ -5,10 +5,17 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
+from routing.auth_routes import get_current_user
 from routing.registry import mongo_entity
 
 
-@mongo_entity(collection="spots", tags=["Spots"], prefix="/spots")
+@mongo_entity(
+    collection="spots",
+    tags=["Spots"],
+    prefix="/spots",
+    authenticated=True,
+    auth_dependency=get_current_user,
+)
 class Spot(BaseModel):
     title: str = Field(min_length=1, max_length=80)
     description: str = Field(default="", max_length=2000)
