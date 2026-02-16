@@ -1,6 +1,7 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue'
 import ActionButton from './ActionButton.vue'
+import AppTextField from './AppTextField.vue'
 import UserProfileCard from './UserProfileCard.vue'
 
 const props = defineProps({
@@ -305,12 +306,14 @@ function isSelected(item) {
           >
             <option v-for="scope in scopes" :key="scope.value" :value="scope.value">{{ scope.label }}</option>
           </select>
-          <input
-            class="form-control"
+          <AppTextField
+            bare
+            class-name="form-control"
             v-model="query"
             :placeholder="placeholder"
+            aria-label="Search query"
             :disabled="disabled || busy"
-            @keydown.enter.prevent="runSearch"
+            @enter="runSearch"
           />
           <ActionButton
             class-name="btn btn-outline-primary"

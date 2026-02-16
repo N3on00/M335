@@ -180,6 +180,6 @@ function onUpdate(value) {
     :multiple="true"
     :max-selected="maxSelected"
     :limit="limit"
-    @update:model-value="onUpdate"
+    @update:modelValue="onUpdate"
   />
 </template>

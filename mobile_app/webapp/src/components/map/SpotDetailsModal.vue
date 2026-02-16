@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { toImageSource } from '../../models/imageMapper'
 import UserProfileCard from '../common/UserProfileCard.vue'
 import ActionButton from '../common/ActionButton.vue'
+import AppTextField from '../common/AppTextField.vue'
 
 const props = defineProps({
   open: { type: Boolean, default: false },
@@ -247,7 +248,14 @@ function goToSpot() {
       </div>
 
       <div class="share-box" v-if="canShare">
-        <input class="form-control" v-model="shareText" maxlength="300" placeholder="Share message (optional)" />
+        <AppTextField
+          bare
+          class-name="form-control"
+          v-model="shareText"
+          maxlength="300"
+          placeholder="Share message (optional)"
+          aria-label="Share message"
+        />
         <ActionButton class-name="btn btn-outline-primary" icon="bi-send" label="Share" @click="submitShare" />
       </div>
 

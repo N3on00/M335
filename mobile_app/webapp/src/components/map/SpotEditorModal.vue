@@ -1,6 +1,7 @@
 <script setup>
 import { computed, reactive, watch } from 'vue'
 import ActionButton from '../common/ActionButton.vue'
+import AppTextField from '../common/AppTextField.vue'
 import UserDirectorySearchPicker from '../common/UserDirectorySearchPicker.vue'
 import { estimateImageBytes, toImageSource } from '../../models/imageMapper'
 
@@ -179,20 +180,23 @@ function submit() {
           />
         </header>
 
-      <label>
-        <span>Title</span>
-        <input class="form-control" v-model="form.title" maxlength="80" :disabled="busy" />
-      </label>
+      <AppTextField label="Title" v-model="form.title" maxlength="80" :disabled="busy" />
 
-      <label>
-        <span>Description</span>
-        <textarea class="form-control" v-model="form.description" maxlength="2000" rows="3" :disabled="busy" />
-      </label>
+      <AppTextField
+        as="textarea"
+        label="Description"
+        v-model="form.description"
+        maxlength="2000"
+        rows="3"
+        :disabled="busy"
+      />
 
-      <label>
-        <span>Tags (comma-separated)</span>
-        <input class="form-control" v-model="form.tagsText" placeholder="Nature, Quiet" :disabled="busy" />
-      </label>
+      <AppTextField
+        label="Tags (comma-separated)"
+        v-model="form.tagsText"
+        placeholder="Nature, Quiet"
+        :disabled="busy"
+      />
 
       <label>
         <span>Visibility</span>

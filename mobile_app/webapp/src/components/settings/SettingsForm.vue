@@ -1,6 +1,8 @@
 <script setup>
 import { computed, reactive, watch } from 'vue'
 import ActionButton from '../common/ActionButton.vue'
+import AppCheckbox from '../common/AppCheckbox.vue'
+import AppTextField from '../common/AppTextField.vue'
 import { toImageSource } from '../../models/imageMapper'
 
 const props = defineProps({
@@ -176,45 +178,62 @@ function submit() {
 
       <div class="row g-2">
         <div class="col-12 col-md-6">
-          <label class="form-label">Username</label>
-          <input class="form-control" v-model="form.username" :disabled="busy" />
+          <AppTextField label="Username" v-model="form.username" :disabled="busy" />
         </div>
         <div class="col-12 col-md-6">
-          <label class="form-label">Email</label>
-          <input class="form-control" v-model="form.email" :disabled="busy" />
+          <AppTextField label="Email" type="email" v-model="form.email" :disabled="busy" />
         </div>
       </div>
 
       <div class="row g-2">
         <div class="col-12 col-md-6">
-          <label class="form-label">Display name</label>
-          <input class="form-control" v-model="form.displayName" :disabled="busy" />
+          <AppTextField label="Display name" v-model="form.displayName" :disabled="busy" />
         </div>
         <div class="col-12 col-md-6 d-grid align-content-end">
-          <label class="form-check mt-4">
-            <input class="form-check-input" type="checkbox" v-model="form.followRequiresApproval" :disabled="busy" />
-            <span class="form-check-label">Require approval for followers</span>
-          </label>
+          <AppCheckbox
+            wrapper-class="app-checkbox mt-4"
+            input-class="app-checkbox__input"
+            label-class="app-checkbox__label"
+            v-model="form.followRequiresApproval"
+            :disabled="busy"
+            label="Require approval for followers"
+          />
         </div>
       </div>
 
-      <div>
-        <label class="form-label">Biography</label>
-        <textarea class="form-control" rows="4" maxlength="1200" v-model="form.bio" :disabled="busy" />
-      </div>
+      <AppTextField
+        as="textarea"
+        label="Biography"
+        rows="4"
+        maxlength="1200"
+        v-model="form.bio"
+        :disabled="busy"
+      />
 
       <div class="row g-2">
         <div class="col-12 col-md-4">
-          <label class="form-label">Instagram</label>
-          <input class="form-control" v-model="form.instagram" placeholder="https://instagram.com/..." :disabled="busy" />
+          <AppTextField
+            label="Instagram"
+            v-model="form.instagram"
+            placeholder="https://instagram.com/..."
+            :disabled="busy"
+          />
         </div>
         <div class="col-12 col-md-4">
-          <label class="form-label">GitHub</label>
-          <input class="form-control" v-model="form.github" placeholder="https://github.com/..." :disabled="busy" />
+          <AppTextField
+            label="GitHub"
+            v-model="form.github"
+            placeholder="https://github.com/..."
+            :disabled="busy"
+          />
         </div>
         <div class="col-12 col-md-4">
-          <label class="form-label">Website</label>
-          <input class="form-control" v-model="form.website" placeholder="https://..." :disabled="busy" />
+          <AppTextField
+            label="Website"
+            v-model="form.website"
+            placeholder="https://..."
+            :disabled="busy"
+          />
         </div>
       </div>
 
@@ -230,21 +249,42 @@ function submit() {
         <div class="col-12 col-md-4">
           <label class="form-label">Current password</label>
           <div class="input-group">
-            <input class="form-control" :type="form.showCurrentPassword ? 'text' : 'password'" v-model="form.currentPassword" :disabled="busy" />
+            <AppTextField
+              bare
+              class-name="form-control"
+              :type="form.showCurrentPassword ? 'text' : 'password'"
+              v-model="form.currentPassword"
+              :disabled="busy"
+              aria-label="Current password"
+            />
             <ActionButton class-name="btn btn-outline-secondary" label="Show" @click="form.showCurrentPassword = !form.showCurrentPassword" />
           </div>
         </div>
         <div class="col-12 col-md-4">
           <label class="form-label">New password</label>
           <div class="input-group">
-            <input class="form-control" :type="form.showNewPassword ? 'text' : 'password'" v-model="form.newPassword" :disabled="busy" />
+            <AppTextField
+              bare
+              class-name="form-control"
+              :type="form.showNewPassword ? 'text' : 'password'"
+              v-model="form.newPassword"
+              :disabled="busy"
+              aria-label="New password"
+            />
             <ActionButton class-name="btn btn-outline-secondary" label="Show" @click="form.showNewPassword = !form.showNewPassword" />
           </div>
         </div>
         <div class="col-12 col-md-4">
           <label class="form-label">Confirm password</label>
           <div class="input-group">
-            <input class="form-control" :type="form.showConfirmPassword ? 'text' : 'password'" v-model="form.confirmNewPassword" :disabled="busy" />
+            <AppTextField
+              bare
+              class-name="form-control"
+              :type="form.showConfirmPassword ? 'text' : 'password'"
+              v-model="form.confirmNewPassword"
+              :disabled="busy"
+              aria-label="Confirm new password"
+            />
             <ActionButton class-name="btn btn-outline-secondary" label="Show" @click="form.showConfirmPassword = !form.showConfirmPassword" />
           </div>
         </div>

@@ -46,6 +46,7 @@
     radial-gradient(circle at 88% 0%, rgba(143, 198, 188, 0.48), transparent 42%),
     radial-gradient(circle at 0% 100%, rgba(163, 190, 227, 0.35), transparent 34%),
     linear-gradient(180deg, #f3f8fa 0%, #edf4f6 100%);
+  --app-mobile-nav-overlay-height: 0px;
 }
 
 [data-theme='dark'] {
@@ -351,6 +352,35 @@ body {
 .slot-host {
   display: grid;
   gap: 0.95rem;
+}
+
+.app-text-field {
+  display: grid;
+  gap: 0.28rem;
+  min-width: 0;
+}
+
+.app-text-field .form-label {
+  margin: 0;
+}
+
+.app-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.app-checkbox__input {
+  margin: 0;
+  accent-color: rgba(var(--bs-primary-rgb), 1);
+}
+
+.app-checkbox__label {
+  color: var(--app-text);
+  font-size: 0.9rem;
+  line-height: 1.25;
 }
 
 .card {
@@ -1184,6 +1214,10 @@ select:-webkit-autofill:focus {
   gap: 0.95rem;
 }
 
+.home-map-widget .leaflet-map {
+  min-height: 320px;
+}
+
 .map-widget-card {
   position: relative;
 }
@@ -1602,9 +1636,9 @@ select:-webkit-autofill:focus {
 
 .notify-stack {
   position: fixed;
-  z-index: 1200;
+  z-index: 1305;
   right: 1rem;
-  bottom: 1rem;
+  bottom: calc(1rem + var(--app-mobile-nav-overlay-height, 0px));
   width: min(390px, calc(100vw - 1rem));
   display: grid;
   gap: 0.55rem;
@@ -1799,6 +1833,10 @@ code {
     min-height: 58vh;
   }
 
+  .home-map-widget .leaflet-map {
+    min-height: 44vh;
+  }
+
   .share-box {
     grid-template-columns: 1fr;
   }
@@ -1950,5 +1988,6 @@ code {
     left: 0.7rem;
     right: 0.7rem;
     width: auto;
+    bottom: calc(var(--app-mobile-nav-overlay-height, 0px) + 0.6rem);
   }
 }

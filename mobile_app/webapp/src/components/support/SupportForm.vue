@@ -1,6 +1,8 @@
 <script setup>
 import { computed, reactive, watch } from 'vue'
 import ActionButton from '../common/ActionButton.vue'
+import AppCheckbox from '../common/AppCheckbox.vue'
+import AppTextField from '../common/AppTextField.vue'
 
 const props = defineProps({
   user: { type: Object, default: null },
@@ -80,38 +82,55 @@ async function submit() {
           </select>
         </div>
         <div class="col-12 col-md-8">
-          <label class="form-label">Subject</label>
-          <input class="form-control" v-model="form.subject" maxlength="140" :disabled="busy" placeholder="Short summary" />
+          <AppTextField
+            label="Subject"
+            v-model="form.subject"
+            maxlength="140"
+            :disabled="busy"
+            placeholder="Short summary"
+          />
         </div>
       </div>
 
-      <div>
-        <label class="form-label">Description</label>
-        <textarea
-          class="form-control"
-          rows="6"
-          maxlength="6000"
-          v-model="form.message"
-          :disabled="busy"
-          placeholder="Steps to reproduce, expected behavior, and actual behavior"
-        />
-      </div>
+      <AppTextField
+        as="textarea"
+        label="Description"
+        rows="6"
+        maxlength="6000"
+        v-model="form.message"
+        :disabled="busy"
+        placeholder="Steps to reproduce, expected behavior, and actual behavior"
+      />
 
       <div class="row g-2">
         <div class="col-12 col-md-6">
-          <label class="form-label">Contact email (optional)</label>
-          <input class="form-control" type="email" v-model="form.contactEmail" :disabled="busy" placeholder="name@example.com" />
+          <AppTextField
+            label="Contact email (optional)"
+            type="email"
+            v-model="form.contactEmail"
+            :disabled="busy"
+            placeholder="name@example.com"
+          />
         </div>
         <div class="col-12 col-md-6">
-          <label class="form-label">Page context (optional)</label>
-          <input class="form-control" v-model="form.page" :disabled="busy" placeholder="/map" maxlength="240" />
+          <AppTextField
+            label="Page context (optional)"
+            v-model="form.page"
+            :disabled="busy"
+            placeholder="/map"
+            maxlength="240"
+          />
         </div>
       </div>
 
-      <label class="support-consent">
-        <input class="support-consent__input" type="checkbox" v-model="form.allowContact" :disabled="busy" />
-        <span class="support-consent__label">I allow follow-up contact regarding this ticket.</span>
-      </label>
+      <AppCheckbox
+        wrapper-class="support-consent"
+        input-class="support-consent__input"
+        label-class="support-consent__label"
+        v-model="form.allowContact"
+        :disabled="busy"
+        label="I allow follow-up contact regarding this ticket."
+      />
 
       <ActionButton
         class-name="btn btn-primary"

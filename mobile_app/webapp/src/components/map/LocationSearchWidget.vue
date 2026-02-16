@@ -1,5 +1,6 @@
 <script setup>
 import ActionButton from '../common/ActionButton.vue'
+import AppTextField from '../common/AppTextField.vue'
 
 const props = defineProps({
   query: { type: String, default: '' },
@@ -37,12 +38,14 @@ function clearActiveLocation() {
       </header>
 
       <div class="map-location-search-row">
-        <input
-          class="form-control"
-          :value="query"
+        <AppTextField
+          bare
+          class-name="form-control"
+          :model-value="query"
           placeholder="Zurich HB, Bahnhofstrasse"
-          @input="updateQuery($event.target.value)"
-          @keydown.enter.prevent="runSearch"
+          aria-label="Search place or address"
+          @update:modelValue="updateQuery"
+          @enter="runSearch"
         />
         <div class="map-search-actions">
           <ActionButton

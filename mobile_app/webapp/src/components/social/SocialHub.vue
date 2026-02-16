@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import ActionButton from '../common/ActionButton.vue'
+import AppTextField from '../common/AppTextField.vue'
 import { toImageSource } from '../../models/imageMapper'
 
 const props = defineProps({
@@ -64,11 +65,13 @@ function submitSearch() {
   <section class="card border-0 shadow-sm" data-aos="fade-up" data-aos-delay="70">
     <div class="card-body d-grid gap-3 p-4">
       <div class="social-search-row">
-        <input
-          class="form-control"
+        <AppTextField
+          bare
+          class-name="form-control"
           v-model="searchText"
           placeholder="Search users by username"
-          @keydown.enter.prevent="submitSearch"
+          aria-label="Search users by username"
+          @enter="submitSearch"
         />
         <ActionButton
           label="Search"

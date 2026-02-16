@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import ActionButton from '../common/ActionButton.vue'
+import AppTextField from '../common/AppTextField.vue'
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
@@ -16,10 +17,6 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update:modelValue', 'enter'])
-
-function onInput(event) {
-  emit('update:modelValue', event?.target?.value || '')
-}
 
 function onEnter() {
   emit('enter')
@@ -67,14 +64,16 @@ const normalizedRequirements = computed(() => {
   <div>
     <label class="form-label">{{ label }}</label>
     <div class="input-group" v-if="allowReveal && type === 'password'">
-      <input
-        class="form-control auth-form-input"
+      <AppTextField
+        bare
+        class-name="form-control auth-form-input"
         :type="inputType"
         :autocomplete="autocomplete"
         :placeholder="placeholder"
-        :value="modelValue"
-        @input="onInput"
-        @keydown.enter.prevent="onEnter"
+        :model-value="modelValue"
+        :aria-label="label"
+        @update:modelValue="(value) => emit('update:modelValue', value)"
+        @enter="onEnter"
       />
       <ActionButton
         class-name="btn btn-outline-secondary"
@@ -82,15 +81,17 @@ const normalizedRequirements = computed(() => {
         @click="reveal = !reveal"
       />
     </div>
-    <input
+    <AppTextField
       v-else
-      class="form-control auth-form-input"
+      bare
+      class-name="form-control auth-form-input"
       :type="inputType"
       :autocomplete="autocomplete"
       :placeholder="placeholder"
-      :value="modelValue"
-      @input="onInput"
-      @keydown.enter.prevent="onEnter"
+      :model-value="modelValue"
+      :aria-label="label"
+      @update:modelValue="(value) => emit('update:modelValue', value)"
+      @enter="onEnter"
     />
     <div class="form-text" v-if="hintText">{{ hintText }}</div>
 

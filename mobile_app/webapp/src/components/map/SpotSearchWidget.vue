@@ -1,5 +1,7 @@
 <script setup>
 import ActionButton from '../common/ActionButton.vue'
+import AppCheckbox from '../common/AppCheckbox.vue'
+import AppTextField from '../common/AppTextField.vue'
 
 const props = defineProps({
   filters: { type: Object, default: () => ({}) },
@@ -50,35 +52,29 @@ function removeSubscription(subscription) {
       </header>
 
       <div class="map-search-grid">
-        <label>
-          <span class="small text-secondary">Search text</span>
-          <input
-            class="form-control"
-            :value="String(filters.text || '')"
-            placeholder="Title, description"
-            @input="updateField('text', $event.target.value)"
-          />
-        </label>
+        <AppTextField
+          label="Search text"
+          label-class="small text-secondary"
+          :model-value="String(filters.text || '')"
+          placeholder="Title, description"
+          @update:modelValue="updateField('text', $event)"
+        />
 
-        <label>
-          <span class="small text-secondary">Tags</span>
-          <input
-            class="form-control"
-            :value="String(filters.tagsText || '')"
-            placeholder="nature, quiet"
-            @input="updateField('tagsText', $event.target.value)"
-          />
-        </label>
+        <AppTextField
+          label="Tags"
+          label-class="small text-secondary"
+          :model-value="String(filters.tagsText || '')"
+          placeholder="nature, quiet"
+          @update:modelValue="updateField('tagsText', $event)"
+        />
 
-        <label>
-          <span class="small text-secondary">Profile</span>
-          <input
-            class="form-control"
-            :value="String(filters.ownerText || '')"
-            placeholder="@username or name"
-            @input="updateField('ownerText', $event.target.value)"
-          />
-        </label>
+        <AppTextField
+          label="Profile"
+          label-class="small text-secondary"
+          :model-value="String(filters.ownerText || '')"
+          placeholder="@username or name"
+          @update:modelValue="updateField('ownerText', $event)"
+        />
 
         <label>
           <span class="small text-secondary">Visibility</span>
@@ -111,15 +107,15 @@ function removeSubscription(subscription) {
           </select>
         </label>
 
-        <label class="map-search-checkbox">
-          <input
-            class="map-search-checkbox__input"
-            type="checkbox"
-            :checked="Boolean(filters.onlyFavorites)"
-            @change="updateField('onlyFavorites', Boolean($event.target.checked))"
-          />
-          <span class="map-search-checkbox__label">Only liked spots</span>
-        </label>
+        <AppCheckbox
+          class="map-search-checkbox"
+          wrapper-class="map-search-checkbox"
+          input-class="map-search-checkbox__input"
+          label-class="map-search-checkbox__label"
+          :model-value="Boolean(filters.onlyFavorites)"
+          label="Only liked spots"
+          @update:modelValue="updateField('onlyFavorites', $event)"
+        />
       </div>
 
       <div class="map-active-location" v-if="activeLocationLabel">
