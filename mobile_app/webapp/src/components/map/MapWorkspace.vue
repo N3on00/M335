@@ -76,6 +76,7 @@ const locationSearchError = ref('')
 const locationResults = ref([])
 const activeLocation = ref(null)
 const visibleSpotCount = ref(SPOT_PAGE_SIZE)
+const spotResultsExpanded = ref(true)
 const lastFocusSignature = ref('')
 
 const ownerProfiles = reactive({})
@@ -749,6 +750,75 @@ onMounted(async () => {
       @remove-subscription="removeFilterSubscription"
     />
 
+    <section class="card border-0 shadow-sm map-widget-card" data-aos="fade-up" data-aos-delay="65">
+      <div class="card-body d-grid gap-2 p-3">
+        <header class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+          <div>
+            <h3 class="h6 mb-1">Spot search results</h3>
+            <p class="small text-secondary mb-0">Results are grouped directly under the spot search card.</p>
+          </div>
+
+          <ActionButton
+            class-name="btn btn-sm btn-outline-secondary"
+            :icon="spotResultsExpanded ? 'bi-chevron-up' : 'bi-chevron-down'"
+            :label="spotResultsExpanded ? 'Collapse results' : `Expand results (${filteredSpots.length})`"
+            :disabled="!filteredSpots.length"
+            @click="spotResultsExpanded = !spotResultsExpanded"
+          />
+        </header>
+
+        <div class="small text-secondary" v-if="!filteredSpots.length">
+          No spots match your current filters.
+        </div>
+
+        <template v-else-if="spotResultsExpanded">
+          <div class="small text-secondary">Tap a card to open full details.</div>
+
+          <div class="spot-feed map-spot-feed">
+            <SpotMiniCard
+              v-for="spot in listedSpots"
+              :key="`map-list-${spot.id}`"
+              :spot="spot"
+              :owner-label="ownerLabel(spot)"
+              :distance-label="spotDistanceLabel(spot)"
+              :interactive="true"
+              @open="openSpotFromList"
+            >
+              <template #top-actions>
+                <div class="spot-card-mini__quick-actions">
+                  <ActionButton
+                    :class-name="isFavorite(spot) ? 'btn btn-sm btn-warning' : 'btn btn-sm btn-outline-warning'"
+                    :icon="isFavorite(spot) ? 'bi-heart-fill' : 'bi-heart'"
+                    :icon-only="true"
+                    :aria-label="isFavorite(spot) ? 'Unlike spot' : 'Like spot'"
+                    @click.stop="toggleFavoriteForSpot(spot)"
+                  />
+                  <ActionButton
+                    class-name="btn btn-sm btn-outline-secondary"
+                    label="Details"
+                    @click.stop="openSpotFromList(spot)"
+                  />
+                </div>
+              </template>
+            </SpotMiniCard>
+          </div>
+
+          <div class="map-spot-feed__load-more" v-if="canLoadMoreSpots">
+            <span class="map-spot-feed__bar" aria-hidden="true"></span>
+            <ActionButton
+              class-name="btn btn-sm btn-outline-primary"
+              :label="`Load ${Math.min(SPOT_PAGE_SIZE, remainingSpotCount)} more (${remainingSpotCount} left)`"
+              @click="loadMoreSpots"
+            />
+          </div>
+        </template>
+
+        <div class="small text-secondary" v-else>
+          {{ filteredSpots.length }} result(s) hidden. Expand to view.
+        </div>
+      </div>
+    </section>
+
     <LocationSearchWidget
       :query="locationQuery"
       :busy="locationSearchBusy"
@@ -769,56 +839,6 @@ onMounted(async () => {
       :on-marker-select="onMarkerSelect"
       :on-viewport-change="onViewportChange"
     />
-
-    <section class="card border-0 shadow-sm" data-aos="fade-up" data-aos-delay="70" v-if="filteredSpots.length">
-      <div class="card-body d-grid gap-2 p-3">
-        <div class="small text-secondary">Tap a card to open full details.</div>
-
-        <div class="spot-feed map-spot-feed">
-          <SpotMiniCard
-            v-for="spot in listedSpots"
-            :key="`map-list-${spot.id}`"
-            :spot="spot"
-            :owner-label="ownerLabel(spot)"
-            :distance-label="spotDistanceLabel(spot)"
-            :interactive="true"
-            @open="openSpotFromList"
-          >
-            <template #top-actions>
-              <div class="spot-card-mini__quick-actions">
-                <ActionButton
-                  :class-name="isFavorite(spot) ? 'btn btn-sm btn-warning' : 'btn btn-sm btn-outline-warning'"
-                  :icon="isFavorite(spot) ? 'bi-heart-fill' : 'bi-heart'"
-                  :icon-only="true"
-                  :aria-label="isFavorite(spot) ? 'Unlike spot' : 'Like spot'"
-                  @click.stop="toggleFavoriteForSpot(spot)"
-                />
-                <ActionButton
-                  class-name="btn btn-sm btn-outline-secondary"
-                  label="Details"
-                  @click.stop="openSpotFromList(spot)"
-                />
-              </div>
-            </template>
-          </SpotMiniCard>
-        </div>
-
-        <div class="map-spot-feed__load-more" v-if="canLoadMoreSpots">
-          <span class="map-spot-feed__bar" aria-hidden="true"></span>
-          <ActionButton
-            class-name="btn btn-sm btn-outline-primary"
-            :label="`Load ${Math.min(SPOT_PAGE_SIZE, remainingSpotCount)} more (${remainingSpotCount} left)`"
-            @click="loadMoreSpots"
-          />
-        </div>
-      </div>
-    </section>
-
-    <section class="card border-0 shadow-sm" data-aos="fade-up" data-aos-delay="70" v-else>
-      <div class="card-body text-secondary">
-        No spots match your current filters.
-      </div>
-    </section>
 
     <SpotEditorModal
       :open="editorOpen"
