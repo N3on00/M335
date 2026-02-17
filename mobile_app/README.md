@@ -152,6 +152,7 @@ CI workflow:
 ## Documentation Index
 
 - Architecture: `ARCHITECTURE.md`
+- Product concept: `concept.md`
 - API contract: `API_SPEC.md`
 - Persistence report: `PERSISTENCE.md`
 - M335 gap and hardening report: `docs/m335-max-points-assessment.md`
