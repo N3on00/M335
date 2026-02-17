@@ -63,6 +63,14 @@ function socialEntries() {
     .filter(([k, v]) => k && v)
 }
 
+function socialLabel(key, value) {
+  const normalizedKey = String(key || '').trim().toLowerCase()
+  if (normalizedKey === 'website' || normalizedKey.startsWith('website_')) {
+    return String(value || '').trim()
+  }
+  return String(key || '').trim()
+}
+
 function isFavorite(spot) {
   const id = String(spot?.id || '').trim()
   if (!id) return false
@@ -175,7 +183,7 @@ function editOwnProfile() {
           <p class="mb-2">{{ profile.bio || 'No biography provided.' }}</p>
           <div class="profile-social-links" v-if="socialEntries().length">
             <a v-for="([key, value]) in socialEntries()" :key="`social-${key}`" :href="value" target="_blank" rel="noreferrer noopener">
-              {{ key }}
+              <span class="profile-social-link__text">{{ socialLabel(key, value) }}</span>
             </a>
           </div>
           <div class="d-flex flex-wrap gap-2 mt-2" v-if="isOwnProfile">

@@ -53,8 +53,8 @@ function buttonClass() {
       <span class="visually-hidden">{{ buttonAriaLabel() }}</span>
     </template>
     <template v-else>
-      <i v-if="icon" class="bi me-2" :class="icon"></i>
-      {{ label }}
+      <i v-if="icon" class="bi me-2 action-button__icon" :class="icon"></i>
+      <span class="action-button__label">{{ label }}</span>
     </template>
   </button>
 </template>

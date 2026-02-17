@@ -174,6 +174,7 @@ body {
 }
 
 .app-top-nav {
+  --app-top-nav-btn-height: 1.95rem;
   position: sticky;
   top: 0.42rem;
   z-index: 1100;
@@ -237,9 +238,14 @@ body {
 }
 
 .app-top-nav__link {
-  min-height: 1.95rem;
+  height: var(--app-top-nav-btn-height);
+  min-height: var(--app-top-nav-btn-height);
   font-size: 0.82rem;
   padding: 0.28rem 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .app-top-nav__link--active {
@@ -255,8 +261,26 @@ body {
 }
 
 .app-top-nav__tool-btn {
-  min-height: 1.95rem;
+  height: var(--app-top-nav-btn-height);
+  min-height: var(--app-top-nav-btn-height);
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.app-top-nav .action-button__icon {
+  flex: 0 0 auto;
+}
+
+.app-top-nav .action-button__label {
+  display: inline-block;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .app-top-nav__user-trigger-btn {
@@ -267,6 +291,7 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 0.42rem;
+  min-width: 0;
 }
 
 .app-top-nav__user-avatar {
@@ -292,12 +317,23 @@ body {
 }
 
 .app-top-nav__user-name {
+  display: inline-block;
+  min-width: 0;
   max-width: 132px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 0.8rem;
   font-weight: 600;
+}
+
+@supports ((-webkit-mask-image: linear-gradient(90deg, #000, transparent)) or (mask-image: linear-gradient(90deg, #000, transparent))) {
+  .app-top-nav .action-button__label,
+  .app-top-nav__user-name {
+    text-overflow: clip;
+    -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 78%, transparent 100%);
+    mask-image: linear-gradient(90deg, #000 0%, #000 78%, transparent 100%);
+  }
 }
 
 .app-top-nav__notice {
@@ -1305,12 +1341,32 @@ select:-webkit-autofill:focus {
 }
 
 .profile-social-links a {
+  display: inline-flex;
+  align-items: center;
+  max-width: min(100%, 340px);
+  min-width: 0;
   text-decoration: none;
   padding: 0.26rem 0.55rem;
   border-radius: 999px;
   background: var(--app-surface-soft);
   border: 1px solid rgba(35, 88, 102, 0.18);
   color: var(--app-text);
+}
+
+.profile-social-link__text {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+@supports ((-webkit-mask-image: linear-gradient(90deg, #000, transparent)) or (mask-image: linear-gradient(90deg, #000, transparent))) {
+  .profile-social-link__text {
+    text-overflow: clip;
+    -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 62%, transparent 100%);
+    mask-image: linear-gradient(90deg, #000 0%, #000 62%, transparent 100%);
+  }
 }
 
 .map-workspace {
@@ -2041,6 +2097,10 @@ code {
     gap: 0.34rem;
   }
 
+  .app-top-nav {
+    --app-top-nav-btn-height: 2.18rem;
+  }
+
   .app-top-nav__brand {
     display: none;
   }
@@ -2067,12 +2127,10 @@ code {
   }
 
   .app-top-nav__link {
-    min-height: 2.18rem;
     font-size: 0.84rem;
   }
 
   .app-top-nav__tool-btn {
-    min-height: 2.18rem;
     min-width: 2.3rem;
     padding-inline: 0.55rem;
   }
