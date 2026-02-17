@@ -1,40 +1,32 @@
 from __future__ import annotations
 
-import os
 import re
 from datetime import UTC, datetime, timedelta
 from threading import Lock
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Optional
 
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jose import JWTError, jwt
+from fastapi.security import OAuth2PasswordRequestForm
+from jose import jwt
 from passlib.context import CryptContext
-from pydantic import BaseModel, Field
-from pymongo import ASCENDING, MongoClient
+from pymongo import ASCENDING
 from pymongo.errors import DuplicateKeyError
 
-
-def _mongo_client() -> MongoClient:
-    mongo_url = os.getenv("MONGO_URL", "mongodb://localhost:27017")
-    return MongoClient(mongo_url)
-
-
-def _social_db_name() -> str:
-    return os.getenv("MONGO_AUTH_DB", "witterungsstation")
-
-
-def _spots_db_name() -> str:
-    return os.getenv("MONGO_SPOTS_DB", "spot_on_sight")
-
-
-def _social_db():
-    return _mongo_client()[_social_db_name()]
-
-
-def _spots_db():
-    return _mongo_client()[_spots_db_name()]
+from data.dto import (
+    AuthTokenResponse,
+    FollowRequestPublic,
+    RegisterRequest,
+    ShareRequest,
+    SpotPublic,
+    SpotUpsertRequest,
+    SupportTicketPublic,
+    SupportTicketRequest,
+    UpdateProfileRequest,
+    UserPublic,
+)
+from data.mongo_context import social_db as _social_db, spots_db as _spots_db
+from routing.auth_dependency import JWT_ALGORITHM, JWT_EXPIRE_MINUTES, JWT_SECRET, get_current_user
 
 
 _index_lock = Lock()
@@ -70,104 +62,6 @@ def _ensure_indexes() -> None:
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
-
-JWT_SECRET = os.getenv("JWT_SECRET", "dev-only-change-me")
-JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
-JWT_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "1440"))
-
-
-class RegisterRequest(BaseModel):
-    username: str = Field(min_length=3, max_length=40)
-    email: str = Field(min_length=5, max_length=200)
-    password: str = Field(min_length=8, max_length=200)
-    display_name: Optional[str] = Field(default=None, max_length=120)
-
-
-class UpdateProfileRequest(BaseModel):
-    username: Optional[str] = Field(default=None, min_length=3, max_length=40)
-    email: Optional[str] = Field(default=None, min_length=5, max_length=200)
-    display_name: Optional[str] = Field(default=None, max_length=120)
-    bio: Optional[str] = Field(default=None, max_length=1200)
-    avatar_image: Optional[str] = Field(default=None, max_length=5_000_000)
-    social_accounts: Optional[Dict[str, str]] = Field(default=None)
-    follow_requires_approval: Optional[bool] = None
-    current_password: Optional[str] = Field(default=None, max_length=200)
-    new_password: Optional[str] = Field(default=None, min_length=8, max_length=200)
-
-
-class UserPublic(BaseModel):
-    id: str
-    username: str
-    email: str
-    display_name: str
-    bio: str = ""
-    avatar_image: str = ""
-    social_accounts: Dict[str, str] = Field(default_factory=dict)
-    follow_requires_approval: bool = False
-    created_at: datetime
-
-
-class SpotUpsertRequest(BaseModel):
-    title: str = Field(min_length=1, max_length=80)
-    description: str = Field(default="", max_length=2000)
-    tags: List[str] = Field(default_factory=list)
-    lat: float
-    lon: float
-    images: List[str] = Field(default_factory=list)
-    visibility: Literal["public", "following", "invite_only", "personal"] = "public"
-    invite_user_ids: List[str] = Field(default_factory=list)
-
-
-class SpotPublic(BaseModel):
-    id: str
-    owner_id: str
-    title: str
-    description: str
-    tags: List[str] = Field(default_factory=list)
-    lat: float
-    lon: float
-    images: List[str] = Field(default_factory=list)
-    visibility: Literal["public", "following", "invite_only", "personal"] = "public"
-    invite_user_ids: List[str] = Field(default_factory=list)
-    created_at: datetime
-
-
-class ShareRequest(BaseModel):
-    message: str = Field(default="", max_length=300)
-
-
-class SupportTicketRequest(BaseModel):
-    category: Literal["bug", "feature", "complaint", "question", "other"] = "other"
-    subject: str = Field(min_length=3, max_length=140)
-    message: str = Field(min_length=10, max_length=6000)
-    page: str = Field(default="", max_length=240)
-    contact_email: Optional[str] = Field(default=None, max_length=200)
-    allow_contact: bool = False
-
-
-class SupportTicketPublic(BaseModel):
-    id: str
-    user_id: str
-    category: Literal["bug", "feature", "complaint", "question", "other"] = "other"
-    subject: str
-    message: str
-    page: str = ""
-    contact_email: str = ""
-    allow_contact: bool = False
-    status: Literal["open", "closed"] = "open"
-    created_at: datetime
-
-
-class FollowRequestPublic(BaseModel):
-    follower: UserPublic
-    created_at: datetime
-
-
-class AuthTokenResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
-    user: UserPublic
 
 
 def _serialize_id(v: Any) -> str:
@@ -381,34 +275,6 @@ def _parse_object_id(value: str) -> ObjectId:
     if not ObjectId.is_valid(value):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid ID format")
     return ObjectId(value)
-
-
-def _get_user_doc(user_id: str) -> Dict[str, Any]:
-    db = _social_db()
-    doc = db["users"].find_one({"_id": _parse_object_id(user_id)})
-    if not doc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid user")
-    return doc
-
-
-def _auth_error() -> HTTPException:
-    return HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-
-
-def get_current_user(token: str = Depends(oauth2_scheme)) -> Dict[str, Any]:
-    try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        user_id = _as_text(payload.get("sub"))
-        if not user_id:
-            raise _auth_error()
-    except JWTError as e:
-        raise _auth_error() from e
-
-    return _get_user_doc(user_id)
 
 
 def _viewer_user_id(current_user: Dict[str, Any]) -> str:
