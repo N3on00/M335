@@ -124,9 +124,7 @@ async function submit() {
       </div>
 
       <AppCheckbox
-        wrapper-class="support-consent"
-        input-class="support-consent__input"
-        label-class="support-consent__label"
+        wrapper-class="app-checkbox"
         v-model="form.allowContact"
         :disabled="busy"
         label="I allow follow-up contact regarding this ticket."

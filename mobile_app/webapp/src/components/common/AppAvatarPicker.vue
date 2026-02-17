@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { toImageSource } from '../../models/imageMapper'
+import { readFileAsBase64 } from '../../utils/fileBase64'
 import ActionButton from './ActionButton.vue'
 
 const props = defineProps({
@@ -19,19 +20,6 @@ const previewSrc = computed(() => {
   if (!raw) return ''
   return toImageSource(raw)
 })
-
-function readFileAsBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onerror = () => reject(new Error('Could not read image file'))
-    reader.onload = () => {
-      const out = String(reader.result || '')
-      const idx = out.indexOf(',')
-      resolve(idx >= 0 ? out.slice(idx + 1) : out)
-    }
-    reader.readAsDataURL(file)
-  })
-}
 
 function openPicker() {
   if (props.disabled) return

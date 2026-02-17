@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import AppTextElement from './AppTextElement.vue'
 
 const props = defineProps({
   modelValue: { type: [String, Number], default: '' },
@@ -108,7 +109,15 @@ function onBlur(event) {
   </template>
 
   <div v-else :class="['app-text-field', wrapperClass]">
-    <label v-if="!hideLabel && label" :for="controlId || undefined" :class="labelClass">{{ label }}</label>
+    <AppTextElement
+      v-if="!hideLabel && label"
+      as="label"
+      variant="label"
+      :for="controlId || undefined"
+      :class-name="labelClass"
+    >
+      {{ label }}
+    </AppTextElement>
 
     <textarea
       v-if="isTextarea"

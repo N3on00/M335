@@ -1,4 +1,6 @@
-import { registerAction, registerComponent } from '../core/registry'
+import { createScreenModule } from '../core/screenRegistry'
+import { UI_ACTIONS, UI_COMPONENT_IDS, UI_SCREENS } from '../core/uiElements'
+import { routeToMap, routeToProfile } from '../router/routeSpec'
 import HomeHero from '../components/home/HomeHero.vue'
 import HomeMapWidget from '../components/home/HomeMapWidget.vue'
 import HomeDiscover from '../components/home/HomeDiscover.vue'
@@ -26,21 +28,7 @@ async function _reloadHomeDashboardStrict(app) {
 }
 
 function _openMap(router, { lat = null, lon = null, spotId = '' } = {}) {
-  const query = {}
-  if (Number.isFinite(lat) && Number.isFinite(lon)) {
-    query.lat = String(lat)
-    query.lon = String(lon)
-  }
-
-  const sid = String(spotId || '').trim()
-  if (sid) {
-    query.spotId = sid
-  }
-
-  router.push({
-    name: 'map',
-    query,
-  })
+  router.push(routeToMap({ lat, lon, spotId }))
 }
 
 function _goToSpot(app, router, spot) {
@@ -59,14 +47,14 @@ function _goToSpot(app, router, spot) {
   _openMap(router, { lat, lon, spotId })
 }
 
-registerAction('home.refresh', async ({ app }) => {
+const homeScreen = createScreenModule(UI_SCREENS.HOME)
+
+homeScreen.action(UI_ACTIONS.HOME_REFRESH, async ({ app }) => {
   await _reloadHomeDashboardStrict(app)
 })
 
-registerComponent({
-  screen: 'home',
-  slot: 'header',
-  id: 'home.hero',
+homeScreen.header({
+  id: UI_COMPONENT_IDS.HOME_HERO,
   order: 10,
   component: HomeHero,
   buildProps: ({ app }) => ({
@@ -74,10 +62,8 @@ registerComponent({
   }),
 })
 
-registerComponent({
-  screen: 'home',
-  slot: 'main',
-  id: 'home.map-widget',
+homeScreen.main({
+  id: UI_COMPONENT_IDS.HOME_MAP_WIDGET,
   order: 8,
   component: HomeMapWidget,
   buildProps: ({ app, router }) => ({
@@ -95,10 +81,8 @@ registerComponent({
   }),
 })
 
-registerComponent({
-  screen: 'home',
-  slot: 'main',
-  id: 'home.discover',
+homeScreen.main({
+  id: UI_COMPONENT_IDS.HOME_DISCOVER,
   order: 10,
   component: HomeDiscover,
   buildProps: ({ app, router }) => ({
@@ -109,7 +93,7 @@ registerComponent({
       const nextId = typeof userId === 'string' && userId.trim()
         ? userId.trim()
         : String(app.state.session.user?.id || '')
-      router.push(`/profile/${nextId}`)
+      router.push(routeToProfile(nextId))
     },
     onRefresh: async () => {
       await runTask(app, {
@@ -147,4 +131,12 @@ registerComponent({
     },
     onNotify: (payload) => notify(app, payload),
   }),
+})
+
+homeScreen.lifecycle({
+  onEnter: async ({ app }) => {
+    await app.ui.runAction(UI_ACTIONS.HOME_REFRESH)
+  },
+  errorTitle: 'Dashboard load failed',
+  errorMessage: 'Could not initialize home screen.',
 })

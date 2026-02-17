@@ -6,7 +6,7 @@ import markerIcon from 'leaflet/dist/images/marker-icon.png'
 import markerShadow from 'leaflet/dist/images/marker-shadow.png'
 import { firstImageSource } from '../../models/imageMapper'
 
-const EDGE_HINT_MARGIN = 20
+const EDGE_HINT_MARGIN = 42
 const EDGE_HINT_MAX = 8
 const EDGE_HINT_MIN_SPACING = 46
 
@@ -130,8 +130,6 @@ function updateEdgeHints() {
   const center = map.getCenter()
   const bounds = map.getBounds()
   const hints = []
-  let visibleCount = 0
-
   for (const spot of props.spots) {
     if (!spot || typeof spot !== 'object') continue
 
@@ -147,7 +145,6 @@ function updateEdgeHints() {
       && point.y <= safeMaxY
 
     if (inViewport || bounds.contains(latLng)) {
-      visibleCount += 1
       continue
     }
 
@@ -168,7 +165,7 @@ function updateEdgeHints() {
     })
   }
 
-  if (visibleCount > 0 || !hints.length) {
+  if (!hints.length) {
     edgeHints.value = []
     return
   }

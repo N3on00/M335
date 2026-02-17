@@ -1,4 +1,6 @@
 <script setup>
+import AppTextElement from './AppTextElement.vue'
+
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
   label: { type: String, default: '' },
@@ -30,6 +32,6 @@ function onChange(event) {
       :disabled="disabled"
       @change="onChange"
     />
-    <span :class="labelClass"><slot>{{ label }}</slot></span>
+    <AppTextElement as="span" variant="label" :class-name="labelClass"><slot>{{ label }}</slot></AppTextElement>
   </label>
 </template>

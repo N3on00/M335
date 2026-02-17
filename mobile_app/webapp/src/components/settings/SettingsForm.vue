@@ -279,6 +279,9 @@ function submit() {
         v-model="form.bio"
         :disabled="busy"
       />
+      <p class="small text-secondary mb-0">
+        Biography supports Markdown, for example <code>**bold**</code>, <code>*italic*</code>, <code>- list item</code>, and <code>[link](https://example.com)</code>.
+      </p>
 
       <div class="row g-2">
         <div class="col-12 col-md-6">

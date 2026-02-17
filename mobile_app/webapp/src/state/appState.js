@@ -4,7 +4,8 @@ import { normalizeFilterSubscription } from '../models/spotSubscriptions'
 
 const SESSION_KEY = 'sos_web_session_v1'
 const THEME_KEY = 'sos_web_theme_v1'
-const FILTER_SUBSCRIPTIONS_KEY = 'sos_map_filter_subscriptions_v1'
+const LEGACY_FILTER_SUBSCRIPTIONS_KEY = 'sos_map_filter_subscriptions_v1'
+const FILTER_SUBSCRIPTIONS_KEY_PREFIX = 'sos_map_filter_subscriptions_v2'
 
 function loadSession() {
   try {
@@ -32,15 +33,51 @@ function loadTheme() {
   }
 }
 
-function loadFilterSubscriptions() {
+function normalizeFilterSubscriptionsForUser(parsed, userId) {
+  if (!Array.isArray(parsed)) return []
+  const ownerUserId = String(userId || '').trim()
+  if (!ownerUserId) return []
+
+  return parsed
+    .map((entry) => normalizeFilterSubscription(entry))
+    .filter(Boolean)
+    .map((entry) => {
+      const owner = String(entry.ownerUserId || '').trim()
+      if (owner && owner !== ownerUserId) {
+        return null
+      }
+      return {
+        ...entry,
+        ownerUserId,
+      }
+    })
+    .filter(Boolean)
+}
+
+function filterSubscriptionsStorageKey(userId) {
+  return `${FILTER_SUBSCRIPTIONS_KEY_PREFIX}:${String(userId || '').trim()}`
+}
+
+function loadFilterSubscriptionsForUser(userId) {
+  const ownerUserId = String(userId || '').trim()
+  if (!ownerUserId) return []
+
   try {
-    const raw = localStorage.getItem(FILTER_SUBSCRIPTIONS_KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed)) return []
-    return parsed
-      .map((entry) => normalizeFilterSubscription(entry))
-      .filter(Boolean)
+    const storageKey = filterSubscriptionsStorageKey(ownerUserId)
+    const raw = localStorage.getItem(storageKey)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      return normalizeFilterSubscriptionsForUser(parsed, ownerUserId)
+    }
+
+    const legacyRaw = localStorage.getItem(LEGACY_FILTER_SUBSCRIPTIONS_KEY)
+    if (!legacyRaw) return []
+
+    const legacyParsed = JSON.parse(legacyRaw)
+    const migrated = normalizeFilterSubscriptionsForUser(legacyParsed, ownerUserId)
+    localStorage.setItem(storageKey, JSON.stringify(migrated))
+    localStorage.removeItem(LEGACY_FILTER_SUBSCRIPTIONS_KEY)
+    return migrated
   } catch {
     return []
   }
@@ -49,7 +86,7 @@ function loadFilterSubscriptions() {
 export function createAppState() {
   const session = loadSession()
   const theme = loadTheme()
-  const filterSubscriptions = loadFilterSubscriptions()
+  const filterSubscriptions = loadFilterSubscriptionsForUser(session.user?.id)
   return reactive({
     config: {
       apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000',
@@ -103,6 +140,7 @@ export function createAppState() {
     },
     ui: {
       theme,
+      activeScreen: '',
     },
   })
 }
@@ -122,8 +160,21 @@ export function persistTheme(state) {
 }
 
 export function persistFilterSubscriptions(state) {
+  const ownerUserId = String(state?.session?.user?.id || '').trim()
+  if (!ownerUserId) return
+
   const subs = Array.isArray(state?.map?.filterSubscriptions)
     ? state.map.filterSubscriptions
     : []
-  localStorage.setItem(FILTER_SUBSCRIPTIONS_KEY, JSON.stringify(subs))
+
+  const normalized = normalizeFilterSubscriptionsForUser(subs, ownerUserId)
+  localStorage.setItem(
+    filterSubscriptionsStorageKey(ownerUserId),
+    JSON.stringify(normalized),
+  )
+}
+
+export function syncUserFilterSubscriptions(state) {
+  const ownerUserId = String(state?.session?.user?.id || '').trim()
+  state.map.filterSubscriptions = loadFilterSubscriptionsForUser(ownerUserId)
 }

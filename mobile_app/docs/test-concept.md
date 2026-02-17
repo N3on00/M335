@@ -12,6 +12,7 @@ In scope:
 - Profile/settings updates
 - Support ticket submission
 - Error handling and session-expiry behavior
+- Mobile shell integration (Capacitor Android/iOS)
 
 Evidence for scope:
 
@@ -24,6 +25,8 @@ Evidence for scope:
   - Evidence: `README.md:13`, `README.md:15`, `README.md:23`
 - Frontend: Node 20+, Vite dev/build flow.
   - Evidence: `README.md:70`, `README.md:87`, `webapp/package.json:8`
+- Mobile packaging: Capacitor CLI with Android/iOS platform toolchains.
+  - Evidence: `webapp/package.json:17`, `webapp/capacitor.config.json`
 
 ## 3) Acceptance Criteria
 
@@ -31,6 +34,7 @@ Evidence for scope:
 - API failures surface as meaningful notifications.
 - Unauthorized session transition redirects to auth and keeps UI stable.
 - Production build passes before release sign-off.
+- Mobile shell sync/build preparation passes for Android and iOS lanes.
 
 Unauthorized flow evidence:
 
@@ -67,28 +71,51 @@ Unauthorized flow evidence:
 - Medium: inconsistent behavior or incorrect notifications
 - Low: cosmetic and non-blocking UX issues
 
-## 6) Minimal Smoke-Test Automation Plan
+## 6) Smoke-Test Automation (Implemented)
 
-## Backend first (pytest + httpx)
+## Backend smoke tests (pytest)
 
-Automate:
+Implemented in:
 
-1. register/login
-2. create/list/update/delete spot
-3. follow request + approve flow
+- `backend/tests/test_api_routes_smoke.py`
+- `backend/tests/test_social_route_helpers.py`
 
-Reason: highest risk coverage for auth + persistence + social rules.
+Coverage:
 
-## Frontend second (Playwright)
+- Route inventory includes all defined auth/social/generic endpoints.
+- OpenAPI reachability check.
+- Contract/status checks for auth validation and protected endpoint unauthorized handling.
+- Spot-id lookup compatibility for both ObjectId and legacy string IDs.
 
-Automate:
+## Frontend contract/resilience tests (vitest)
 
-1. login -> home load
-2. create spot from map workflow
-3. session-expiry redirect behavior
+Implemented in:
+
+- `webapp/src/tests/apiGatewayEndpoints.spec.js`
+- `webapp/src/tests/serviceApiCommunication.spec.js`
+- `webapp/src/tests/authAndStateResilience.spec.js`
+- `webapp/src/tests/activityWatchSubscriptions.spec.js`
+- `webapp/src/tests/pageRegistryHarness.spec.js`
+- `webapp/src/tests/harness/pageRegistryHarness.js`
+- `webapp/src/tests/platformService.spec.js`
+- `webapp/src/tests/mapFilterSummary.spec.js`
+- `webapp/src/tests/capacitorConfig.spec.js`
+- `webapp/src/tests/mobileNativeShell.spec.js`
+- `webapp/src/tests/spotSharePayload.spec.js`
+
+Coverage:
+
+- Generic endpoint registry dispatch and token/path/query/body handling.
+- Service-to-endpoint communication for auth/spots/social/users/support.
+- Unauthorized callback, session restore, and offline fallback behavior.
+- User-scoped filter subscription notification behavior.
+- Generic per-page registry validation through inherited test harness classes and mock-data action/component assertions.
+- Native-platform persistence/lifecycle adapter behavior (mocked Capacitor bridge).
+- Collapsed map-filter summary behavior for mobile-first filter widget usage.
+- Capacitor config and native shell project contracts for Android/iOS.
+- Spot-share payload/deep-link generation behavior.
 
 ## Suggested test locations
 
 - Backend: `backend/tests/`
-- Frontend e2e: `webapp/tests/e2e/`
-- Frontend unit (optional): `webapp/tests/unit/`
+- Frontend unit/contract: `webapp/src/tests/`

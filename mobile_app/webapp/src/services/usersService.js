@@ -1,9 +1,26 @@
 import { normalizeUser } from '../models/userMapper'
+import { API_ENDPOINTS } from '../api/registry'
 import { ApiStateService } from './baseService'
 
 function addIfDefined(out, key, value) {
   if (value === undefined) return
   out[key] = value
+}
+
+function asText(value) {
+  return String(value || '').trim()
+}
+
+function uniqueIds(items) {
+  const out = []
+  const seen = new Set()
+  for (const item of Array.isArray(items) ? items : []) {
+    const id = asText(item)
+    if (!id || seen.has(id)) continue
+    seen.add(id)
+    out.push(id)
+  }
+  return out
 }
 
 function dedupeUsers(items) {
@@ -48,6 +65,23 @@ export class UsersService extends ApiStateService {
     super(api, state, { serviceName: 'users' })
   }
 
+  async _profilesByIds(userIds) {
+    const ids = uniqueIds(userIds)
+    const rows = await Promise.all(
+      ids.map(async (id) => {
+        try {
+          const data = await this.api.request(API_ENDPOINTS.SOCIAL_USERS_PROFILE, {
+            params: { userId: id },
+          })
+          return normalizeUser(data)
+        } catch {
+          return null
+        }
+      }),
+    )
+    return rows.filter(Boolean)
+  }
+
   async me() {
     if (!this.token()) {
       this.captureError('Authentication required', 'Authentication required')
@@ -55,7 +89,7 @@ export class UsersService extends ApiStateService {
     }
 
     try {
-      const data = await this.api.get('/social/me', { token: this.token() })
+      const data = await this.api.request(API_ENDPOINTS.SOCIAL_ME_GET)
       this.clearError()
       return normalizeUser(data)
     } catch (error) {
@@ -77,7 +111,9 @@ export class UsersService extends ApiStateService {
     }
 
     try {
-      const data = await this.api.get(`/social/users/${id}/profile`, { token: this.token() })
+      const data = await this.api.request(API_ENDPOINTS.SOCIAL_USERS_PROFILE, {
+        params: { userId: id },
+      })
       this.clearError()
       return normalizeUser(data)
     } catch (error) {
@@ -99,10 +135,14 @@ export class UsersService extends ApiStateService {
     }
 
     const safeLimit = Math.min(50, Math.max(1, Number(limit) || 20))
-    const path = `/social/users/search?q=${encodeURIComponent(q)}&limit=${safeLimit}`
 
     try {
-      const data = await this.api.get(path, { token: this.token() })
+      const data = await this.api.request(API_ENDPOINTS.SOCIAL_USERS_SEARCH, {
+        query: {
+          q,
+          limit: safeLimit,
+        },
+      })
       this.clearError()
       return Array.isArray(data) ? data.map((item) => normalizeUser(item)) : []
     } catch (error) {
@@ -125,12 +165,21 @@ export class UsersService extends ApiStateService {
 
     try {
       const [followers, following] = await Promise.all([
-        this.api.get(`/social/followers/${userId}`, { token: this.token() }),
-        this.api.get(`/social/following/${userId}`, { token: this.token() }),
+        this.api.request(API_ENDPOINTS.SOCIAL_FOLLOWERS_LIST, {
+          params: { userId },
+        }),
+        this.api.request(API_ENDPOINTS.SOCIAL_FOLLOWING_LIST, {
+          params: { userId },
+        }),
       ])
 
       const meId = userId
-      const merged = dedupeUsers([...(followers || []), ...(following || [])])
+      const ids = uniqueIds([
+        ...(Array.isArray(followers) ? followers.map((entry) => asText(entry?.user_id)) : []),
+        ...(Array.isArray(following) ? following.map((entry) => asText(entry?.user_id)) : []),
+      ])
+      const hydrated = await this._profilesByIds(ids)
+      const merged = dedupeUsers(hydrated)
         .filter((user) => String(user.id || '') !== meId)
         .sort(byDisplayName)
 
@@ -170,7 +219,9 @@ export class UsersService extends ApiStateService {
     addIfDefined(payload, 'new_password', src.newPassword)
 
     try {
-      const data = await this.api.put('/social/me', payload, { token: this.token() })
+      const data = await this.api.request(API_ENDPOINTS.SOCIAL_ME_UPDATE, {
+        body: payload,
+      })
       this.clearError()
       return normalizeUser(data)
     } catch (error) {

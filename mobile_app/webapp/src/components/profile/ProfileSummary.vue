@@ -1,9 +1,11 @@
 <script setup>
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { toImageSource } from '../../models/imageMapper'
+import { useOwnerProfiles } from '../../composables/useOwnerProfiles'
 import SpotDetailsModal from '../map/SpotDetailsModal.vue'
 import SpotMiniCard from '../common/SpotMiniCard.vue'
 import ActionButton from '../common/ActionButton.vue'
+import AppMarkdownBlock from '../common/AppMarkdownBlock.vue'
 
 const props = defineProps({
   profile: { type: Object, default: null },
@@ -26,8 +28,7 @@ const props = defineProps({
 const activeTab = ref('created')
 const detailsOpen = ref(false)
 const selectedSpot = ref(null)
-const ownerProfiles = reactive({})
-const ownerLoading = reactive({})
+const { ownerLabel, warmOwnerProfiles } = useOwnerProfiles((ownerId) => props.onLoadUserProfile(ownerId))
 const favoritesSet = computed(() => new Set((props.favorites || []).map((id) => String(id))))
 
 const activeSpots = computed(() => {
@@ -75,57 +76,6 @@ function isFavorite(spot) {
   const id = String(spot?.id || '').trim()
   if (!id) return false
   return favoritesSet.value.has(id)
-}
-
-function ownerProfileOf(spot) {
-  const ownerId = String(spot?.owner_id || '').trim()
-  if (!ownerId) return null
-  return ownerProfiles[ownerId] || null
-}
-
-function ownerLabel(spot) {
-  const ownerId = String(spot?.owner_id || '').trim()
-  if (!ownerId) return 'unknown creator'
-
-  if (ownerLoading[ownerId]) {
-    return 'loading creator...'
-  }
-
-  const profile = ownerProfileOf(spot)
-  const username = String(profile?.username || '').trim()
-  if (username) {
-    return `@${username}`
-  }
-
-  const displayName = String(profile?.display_name || '').trim()
-  if (displayName) {
-    return displayName
-  }
-
-  return `id: ${ownerId}`
-}
-
-async function warmOwnerProfiles(spots) {
-  const ownerIds = [...new Set(
-    (Array.isArray(spots) ? spots : [])
-      .map((spot) => String(spot?.owner_id || '').trim())
-      .filter(Boolean),
-  )]
-
-  await Promise.all(
-    ownerIds.map(async (ownerId) => {
-      if (ownerLoading[ownerId]) return
-      if (ownerId in ownerProfiles) return
-
-      ownerLoading[ownerId] = true
-      try {
-        const profile = await props.onLoadUserProfile(ownerId)
-        ownerProfiles[ownerId] = profile && typeof profile === 'object' ? profile : null
-      } finally {
-        ownerLoading[ownerId] = false
-      }
-    }),
-  )
 }
 
 function openSpotDetails(spot) {
@@ -180,7 +130,11 @@ function editOwnProfile() {
         <div>
           <h2 class="h4 mb-1">{{ displayName() }}</h2>
           <div class="text-secondary small mb-2">@{{ profile.username || 'unknown' }}</div>
-          <p class="mb-2">{{ profile.bio || 'No biography provided.' }}</p>
+          <AppMarkdownBlock
+            class-name="profile-bio mb-2"
+            :content="profile.bio"
+            empty-text="No biography provided."
+          />
           <div class="profile-social-links" v-if="socialEntries().length">
             <a v-for="([key, value]) in socialEntries()" :key="`social-${key}`" :href="value" target="_blank" rel="noreferrer noopener">
               <span class="profile-social-link__text">{{ socialLabel(key, value) }}</span>
@@ -196,12 +150,22 @@ function editOwnProfile() {
           </div>
           <div class="d-flex flex-wrap gap-2 mt-2" v-if="!isOwnProfile">
             <ActionButton
-              :class-name="isFollowingProfile ? 'btn btn-outline-danger' : 'btn btn-primary'"
-              :icon="isFollowingProfile ? 'bi-person-dash' : 'bi-person-plus'"
-              :label="isFollowingProfile ? 'Unfollow' : 'Follow'"
+              v-if="isFollowingProfile"
+              class-name="btn btn-outline-danger"
+              icon="bi-person-dash"
+              label="Unfollow"
               :busy="followBusy"
               busy-label="Saving..."
-              @click="isFollowingProfile ? unfollowProfile() : followProfile()"
+              @click="unfollowProfile"
+            />
+            <ActionButton
+              v-else
+              class-name="btn btn-primary"
+              icon="bi-person-plus"
+              label="Follow"
+              :busy="followBusy"
+              busy-label="Saving..."
+              @click="followProfile"
             />
           </div>
         </div>

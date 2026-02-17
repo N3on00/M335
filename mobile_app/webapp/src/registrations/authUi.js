@@ -1,11 +1,24 @@
-import { registerAction, registerComponent } from '../core/registry'
+import { createScreenModule } from '../core/screenRegistry'
+import { AuthScreenErrorHandler } from '../core/errorHandlerRegistry'
+import { UI_ACTIONS, UI_COMPONENT_IDS, UI_SCREENS } from '../core/uiElements'
+import { routeToHome } from '../router/routeSpec'
 import AuthHero from '../components/auth/AuthHero.vue'
 import AuthForms from '../components/auth/AuthForms.vue'
 import AuthSupport from '../components/auth/AuthSupport.vue'
 import { toUserErrorMessage } from '../services/apiErrors'
 import { controllerLastError, notifyInfo, reloadCoreData, runBooleanAction } from './uiShared'
 
-registerAction('auth.help', ({ app }) => {
+class AuthPageErrorHandler extends AuthScreenErrorHandler {}
+
+const authScreen = createScreenModule(UI_SCREENS.AUTH)
+
+authScreen.errorHandler({
+  id: 'screen.auth.page',
+  handlerClass: AuthPageErrorHandler,
+  useForRoute: true,
+})
+
+authScreen.action(UI_ACTIONS.AUTH_HELP, ({ app }) => {
   notifyInfo(
     app,
     'Support',
@@ -14,10 +27,8 @@ registerAction('auth.help', ({ app }) => {
   )
 })
 
-registerComponent({
-  screen: 'auth',
-  slot: 'header',
-  id: 'auth.hero',
+authScreen.header({
+  id: UI_COMPONENT_IDS.AUTH_HERO,
   order: 10,
   component: AuthHero,
   buildProps: () => ({
@@ -26,10 +37,8 @@ registerComponent({
   }),
 })
 
-registerComponent({
-  screen: 'auth',
-  slot: 'main',
-  id: 'auth.forms',
+authScreen.main({
+  id: UI_COMPONENT_IDS.AUTH_FORMS,
   order: 10,
   component: AuthForms,
   buildProps: ({ app, router }) => {
@@ -57,7 +66,7 @@ registerComponent({
         successMessage,
         onSuccess: async () => {
           await reloadCoreData(app)
-          router.push('/home')
+          router.push(routeToHome())
         },
       })
     }
@@ -85,14 +94,17 @@ registerComponent({
   },
 })
 
-registerComponent({
-  screen: 'auth',
-  slot: 'footer',
-  id: 'auth.support',
+authScreen.footer({
+  id: UI_COMPONENT_IDS.AUTH_SUPPORT,
   order: 10,
   component: AuthSupport,
   buildProps: ({ app }) => ({
     supportEmail: app.state.config.supportEmail,
-    onHelp: () => app.ui.runAction('auth.help'),
+    onHelp: () => app.ui.runAction(UI_ACTIONS.AUTH_HELP),
   }),
+})
+
+authScreen.lifecycle({
+  errorTitle: 'Authentication failed',
+  errorMessage: 'Please verify your credentials and backend availability.',
 })

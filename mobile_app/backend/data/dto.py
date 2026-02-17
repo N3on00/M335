@@ -1,20 +1,26 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+import re
 from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
-from routing.auth_dependency import get_current_user
-from routing.registry import mongo_entity
+from routing.registry import mongo_entity_encrypted
 
 
-@mongo_entity(
+def _normalize_email(value: str) -> str:
+    return str(value or "").strip().lower()
+
+
+def _normalize_username(value: str) -> str:
+    return str(value or "").strip().lower()
+
+
+@mongo_entity_encrypted(
     collection="spots",
     tags=["Spots"],
     prefix="/spots",
-    authenticated=True,
-    auth_dependency=get_current_user,
 )
 class Spot(BaseModel):
     title: str = Field(min_length=1, max_length=80)
@@ -35,7 +41,7 @@ class Spot(BaseModel):
         return v or datetime.now(UTC)
 
 
-@mongo_entity(collection="client_error_reports", tags=["ClientErrors"], prefix="/client-errors")
+@mongo_entity_encrypted(collection="client_error_reports", tags=["ClientErrors"], prefix="/client-errors")
 class ClientErrorReport(BaseModel):
     kind: str = Field(default="exception", max_length=40)
     source: str = Field(default="app", max_length=80)
@@ -144,3 +150,81 @@ class AuthTokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserPublic
+
+
+class LoginRequest(BaseModel):
+    username_or_email: str = Field(min_length=3, max_length=200)
+    password: str = Field(min_length=1, max_length=200)
+
+    @field_validator("username_or_email")
+    @classmethod
+    def normalize_username_or_email(cls, v: str) -> str:
+        return str(v or "").strip().lower()
+
+
+class AuthUserRecord(BaseModel):
+    username: str = Field(min_length=3, max_length=40)
+    email: str = Field(min_length=5, max_length=200)
+    password_hash: str = Field(min_length=1, max_length=500)
+    display_name: str = Field(min_length=1, max_length=120)
+    bio: str = Field(default="", max_length=1200)
+    avatar_image: str = Field(default="", max_length=5_000_000)
+    social_accounts: Dict[str, str] = Field(default_factory=dict)
+    follow_requires_approval: bool = False
+    created_at: Optional[datetime] = None
+
+    @field_validator("username")
+    @classmethod
+    def normalize_username(cls, v: str) -> str:
+        username = _normalize_username(v)
+        if not re.fullmatch(r"[a-z0-9_.-]{3,40}", username):
+            raise ValueError("Invalid username format")
+        return username
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, v: str) -> str:
+        email = _normalize_email(v)
+        if "@" not in email:
+            raise ValueError("Invalid email format")
+        return email
+
+    @field_validator("social_accounts")
+    @classmethod
+    def sanitize_social_accounts(cls, v: Dict[str, str]) -> Dict[str, str]:
+        out: Dict[str, str] = {}
+        source = v if isinstance(v, dict) else {}
+        for key, value in source.items():
+            k = str(key or "").strip()
+            val = str(value or "").strip()
+            if not k or not val:
+                continue
+            if len(k) > 40 or len(val) > 500:
+                continue
+            out[k] = val
+        return out
+
+    @field_validator("created_at")
+    @classmethod
+    def default_created_at(cls, v):
+        return v or datetime.now(UTC)
+
+
+class FavoriteRef(BaseModel):
+    spot_id: str
+    created_at: datetime
+
+
+class FollowRef(BaseModel):
+    user_id: str
+    created_at: datetime
+
+
+class FollowRequestRef(BaseModel):
+    follower_id: str
+    created_at: datetime
+
+
+class BlockRef(BaseModel):
+    user_id: str
+    created_at: datetime

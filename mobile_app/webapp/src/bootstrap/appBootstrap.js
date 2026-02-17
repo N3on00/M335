@@ -2,6 +2,7 @@ import { AppContext } from '../core/context'
 import { UIController } from '../core/uiController'
 import { createAppState } from '../state/appState'
 import { ApiClient } from '../services/apiClient'
+import { ApiGatewayService } from '../services/apiGatewayService'
 import { AuthService } from '../services/authService'
 import { SpotsService } from '../services/spotsService'
 import { SocialService } from '../services/socialService'
@@ -10,12 +11,18 @@ import { LocationSearchService } from '../services/locationSearchService'
 import { SupportService } from '../services/supportService'
 import { NotificationService } from '../services/notificationService'
 import { ActivityWatchService } from '../services/activityWatchService'
+import { RuntimeService } from '../services/runtimeService'
+import { PlatformService } from '../services/platformService'
+import { ApiController } from '../controllers/apiController'
 import { AuthController } from '../controllers/authController'
 import { SpotsController } from '../controllers/spotsController'
 import { SocialController } from '../controllers/socialController'
 import { UsersController } from '../controllers/usersController'
 import { SupportController } from '../controllers/supportController'
 import { registerUi } from './uiRegistrations'
+import { registerComponentDecorators } from './componentDecoratorRegistrations'
+import { registerErrorHandlers } from './errorHandlerRegistrations'
+import { registerRuntime } from './runtimeRegistrations'
 
 function resetAuthenticatedState(state) {
   state.session.token = ''
@@ -60,22 +67,29 @@ function handleUnauthorizedSession(ctx) {
 
 export function buildAppContext() {
   const state = createAppState()
+  registerComponentDecorators()
+  registerErrorHandlers()
+  registerRuntime()
 
   const serviceFactories = {
     apiClient: (ctx) => new ApiClient(ctx.state.config.apiBaseUrl, {
       onUnauthorized: () => handleUnauthorizedSession(ctx),
     }),
-    authService: (ctx) => new AuthService(ctx.service('apiClient'), ctx.state),
-    spotsService: (ctx) => new SpotsService(ctx.service('apiClient'), ctx.state),
-    socialService: (ctx) => new SocialService(ctx.service('apiClient'), ctx.state),
-    usersService: (ctx) => new UsersService(ctx.service('apiClient'), ctx.state),
+    apiGateway: (ctx) => new ApiGatewayService(ctx.service('apiClient'), ctx.state),
+    authService: (ctx) => new AuthService(ctx.service('apiGateway'), ctx.state),
+    spotsService: (ctx) => new SpotsService(ctx.service('apiGateway'), ctx.state),
+    socialService: (ctx) => new SocialService(ctx.service('apiGateway'), ctx.state),
+    usersService: (ctx) => new UsersService(ctx.service('apiGateway'), ctx.state),
     locationSearch: () => new LocationSearchService(),
-    supportService: (ctx) => new SupportService(ctx.service('apiClient'), ctx.state),
+    supportService: (ctx) => new SupportService(ctx.service('apiGateway'), ctx.state),
     notify: (ctx) => new NotificationService(ctx.state),
     activityWatch: (ctx) => new ActivityWatchService(ctx),
+    runtime: (ctx) => new RuntimeService(ctx),
+    platform: (ctx) => new PlatformService(ctx.state),
   }
 
   const controllerFactories = {
+    api: (ctx) => new ApiController(ctx),
     auth: (ctx) => new AuthController(ctx),
     spots: (ctx) => new SpotsController(ctx),
     social: (ctx) => new SocialController(ctx),

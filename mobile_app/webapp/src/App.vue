@@ -1,5 +1,5 @@
 <script setup>
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { onMounted, ref } from 'vue'
 import { RouterView } from 'vue-router'
 import NotificationStack from './components/common/NotificationStack.vue'
 import SosLoader from './components/common/SosLoader.vue'
@@ -8,7 +8,6 @@ import { useApp } from './core/injection'
 
 const app = useApp()
 const bootLoading = ref(true)
-const activityWatch = app.service('activityWatch')
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -45,21 +44,6 @@ onMounted(async () => {
   }
 })
 
-watch(
-  () => app.state.session.token,
-  (token) => {
-    if (String(token || '').trim()) {
-      activityWatch.start()
-      return
-    }
-    activityWatch.stop()
-  },
-  { immediate: true },
-)
-
-onBeforeUnmount(() => {
-  activityWatch.stop()
-})
 </script>
 
 <template>
@@ -78,7 +62,7 @@ onBeforeUnmount(() => {
     <Transition name="app-loader-fade">
       <div class="app-loader-screen" v-if="bootLoading">
         <div class="app-loader-panel card border-0 shadow-sm">
-          <SosLoader size="lg" label="Loading web app..." />
+          <SosLoader size="lg" label="Loading app..." />
           <p class="text-secondary small mb-0">Please wait a moment.</p>
         </div>
       </div>

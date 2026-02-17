@@ -4,6 +4,7 @@ import ActionButton from '../common/ActionButton.vue'
 import AppTextField from '../common/AppTextField.vue'
 import UserDirectorySearchPicker from '../common/UserDirectorySearchPicker.vue'
 import { estimateImageBytes, toImageSource } from '../../models/imageMapper'
+import { readFileAsBase64 } from '../../utils/fileBase64'
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 const MAX_TOTAL_IMAGE_BYTES = 20 * 1024 * 1024
@@ -59,19 +60,6 @@ function parseTags(text) {
     .split(',')
     .map((x) => x.trim())
     .filter(Boolean)
-}
-
-function readFileAsBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onerror = () => reject(new Error('Could not read image file'))
-    reader.onload = () => {
-      const out = String(reader.result || '')
-      const idx = out.indexOf(',')
-      resolve(idx >= 0 ? out.slice(idx + 1) : out)
-    }
-    reader.readAsDataURL(file)
-  })
 }
 
 async function onFilesSelected(event) {

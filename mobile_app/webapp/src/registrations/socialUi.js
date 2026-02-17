@@ -1,25 +1,25 @@
-import { registerAction, registerComponent } from '../core/registry'
+import { createScreenModule } from '../core/screenRegistry'
+import { UI_ACTIONS, UI_COMPONENT_IDS, UI_SCREENS } from '../core/uiElements'
+import { routeToProfile } from '../router/routeSpec'
 import SocialHero from '../components/social/SocialHero.vue'
 import SocialHub from '../components/social/SocialHub.vue'
 import { controllerLastError, reloadDashboardData, runBooleanAction, runTask } from './uiShared'
 
-registerAction('social.refresh', async ({ app }) => {
+const socialScreen = createScreenModule(UI_SCREENS.SOCIAL)
+
+socialScreen.action(UI_ACTIONS.SOCIAL_REFRESH, async ({ app }) => {
   app.state.social.searchResults = []
   await reloadDashboardData(app)
 })
 
-registerComponent({
-  screen: 'social',
-  slot: 'header',
-  id: 'social.hero',
+socialScreen.header({
+  id: UI_COMPONENT_IDS.SOCIAL_HERO,
   order: 10,
   component: SocialHero,
 })
 
-registerComponent({
-  screen: 'social',
-  slot: 'main',
-  id: 'social.hub',
+socialScreen.main({
+  id: UI_COMPONENT_IDS.SOCIAL_HUB,
   order: 10,
   component: SocialHub,
   buildProps: ({ app, router }) => {
@@ -132,8 +132,16 @@ registerComponent({
         })
       },
       onOpenProfile: (userId) => {
-        router.push(`/profile/${userId}`)
+        router.push(routeToProfile(userId))
       },
     }
   },
+})
+
+socialScreen.lifecycle({
+  onEnter: async ({ app }) => {
+    await app.ui.runAction(UI_ACTIONS.SOCIAL_REFRESH)
+  },
+  errorTitle: 'Social load failed',
+  errorMessage: 'Could not initialize social page.',
 })

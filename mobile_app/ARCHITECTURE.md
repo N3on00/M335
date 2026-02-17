@@ -4,12 +4,20 @@
 
 - Client: Vue SPA (`webapp/`) for authenticated users to manage spots, social graph, profile/settings, and support requests.
   - Evidence: `webapp/src/router/index.js:17`, `webapp/src/router/index.js:22`
+- Mobile packaging: Capacitor wraps the same web bundle for Android and iOS shells.
+  - Evidence: `webapp/capacitor.config.json`, `webapp/package.json`
 - API: FastAPI backend (`backend/`) exposing auth, social, support, and generic CRUD endpoints.
   - Evidence: `backend/routing/routing.py:29`, `backend/routing/routing.py:30`, `backend/routing/router.py:83`
 - Database: MongoDB collections for users/social interactions/support and spots.
   - Evidence: `backend/routing/auth_routes.py:53`, `backend/routing/auth_routes.py:67`
 - External integration: location search providers (Nominatim primary, Photon fallback).
   - Evidence: `webapp/src/services/locationSearchService.js:80`, `webapp/src/services/locationSearchService.js:112`
+
+## Evolution Note
+
+- The repository includes a historical Python GUI prototype (`app/`) from the initial cross-platform phase.
+- Active architecture moved to `webapp/` once the project standardized on Vue + Capacitor for browser/Android/iOS delivery.
+- Current hardening and feature work target `webapp/` + backend only.
 
 ## 2) Component Overview
 
@@ -25,6 +33,8 @@
   - Evidence: `webapp/src/controllers/spotsController.js:8`, `webapp/src/services/spotsService.js:9`
 - `ApiClient` centralizes HTTP transport and unauthorized-session callback integration.
   - Evidence: `webapp/src/services/apiClient.js:4`, `webapp/src/services/apiClient.js:51`
+- `PlatformService` provides native lifecycle + storage integration (Capacitor bridge) without changing controller/service contracts.
+  - Evidence: `webapp/src/services/platformService.js`, `webapp/src/platform/capacitorBridge.js`
 
 ## Backend Components
 
@@ -107,7 +117,7 @@ Security baseline gap:
 4. Backend returns `AuthTokenResponse`.
    - Evidence: `backend/routing/auth_routes.py:477`, `backend/routing/auth_routes.py:167`
 5. Session persistence watch stores auth state.
-   - Evidence: `webapp/src/main.js:40`, `webapp/src/state/appState.js:109`
+   - Evidence: `webapp/src/main.js:54`, `webapp/src/state/appState.js:148`, `webapp/src/services/platformService.js:122`
 
 ## Spot Create Flow
 
@@ -168,6 +178,6 @@ Current gaps:
 ## 9) Active Refactor Backlog
 
 1. Split `backend/routing/auth_routes.py` by layer.
-2. Remove duplicated owner-profile and file-base64 helpers in webapp.
+2. Complete social-router layering split (`routing -> service -> repository`).
 3. Standardize error envelope and transport resilience.
-4. Add automated smoke tests and release protocol.
+4. Add native store release automation (Android signing + iOS TestFlight lane).

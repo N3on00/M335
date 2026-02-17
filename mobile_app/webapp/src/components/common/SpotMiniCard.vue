@@ -13,6 +13,7 @@ const props = defineProps({
   isFavorite: { type: Boolean, default: false },
   showGoTo: { type: Boolean, default: false },
   maxTags: { type: Number, default: 4 },
+  descriptionMaxLength: { type: Number, default: 120 },
 })
 
 const emit = defineEmits(['open', 'go-to'])
@@ -24,11 +25,19 @@ const hasTopRail = computed(() => {
   return Boolean(slots['top-actions'] || props.showFavoriteBadge || props.showVisibilityBadge)
 })
 
+const normalizedDescriptionLimit = computed(() => {
+  const value = Number(props.descriptionMaxLength)
+  if (!Number.isFinite(value)) return 120
+  const rounded = Math.floor(value)
+  return Math.max(20, rounded)
+})
+
 const descriptionText = computed(() => {
   const value = String(props.spot?.description || '').trim()
   if (!value) return 'No description yet.'
-  if (value.length <= 120) return value
-  return `${value.slice(0, 117)}...`
+  if (value.length <= normalizedDescriptionLimit.value) return value
+  const clipAt = Math.max(1, normalizedDescriptionLimit.value - 3)
+  return `${value.slice(0, clipAt).trimEnd()}...`
 })
 
 const imageCount = computed(() => {
@@ -81,7 +90,7 @@ function goToSpot(event) {
           <h4 class="h6 mb-0 spot-card-mini__title">{{ spot?.title || 'Untitled spot' }}</h4>
         </div>
 
-        <p class="small text-secondary mb-0">{{ descriptionText }}</p>
+        <p class="small text-secondary mb-0 spot-card-mini__description">{{ descriptionText }}</p>
 
         <div class="spot-card-mini__meta">
           <span><i class="bi bi-geo-alt me-1"></i>{{ Number(spot?.lat || 0).toFixed(3) }}, {{ Number(spot?.lon || 0).toFixed(3) }}</span>

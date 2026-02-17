@@ -1,4 +1,5 @@
-import { registerAction, registerComponent } from '../core/registry'
+import { createScreenModule } from '../core/screenRegistry'
+import { UI_ACTIONS, UI_COMPONENT_IDS, UI_SCREENS } from '../core/uiElements'
 import SettingsHero from '../components/settings/SettingsHero.vue'
 import SettingsForm from '../components/settings/SettingsForm.vue'
 import {
@@ -10,23 +11,21 @@ import {
   toggleTheme,
 } from './uiShared'
 
-registerAction('settings.load', async ({ app }) => {
+const settingsScreen = createScreenModule(UI_SCREENS.SETTINGS)
+
+settingsScreen.action(UI_ACTIONS.SETTINGS_LOAD, async ({ app }) => {
   await app.controller('users').refreshProfile()
   await reloadDashboardData(app)
 })
 
-registerComponent({
-  screen: 'settings',
-  slot: 'header',
-  id: 'settings.hero',
+settingsScreen.header({
+  id: UI_COMPONENT_IDS.SETTINGS_HERO,
   order: 10,
   component: SettingsHero,
 })
 
-registerComponent({
-  screen: 'settings',
-  slot: 'main',
-  id: 'settings.form',
+settingsScreen.main({
+  id: UI_COMPONENT_IDS.SETTINGS_FORM,
   order: 10,
   component: SettingsForm,
   buildProps: ({ app }) => ({
@@ -63,4 +62,12 @@ registerComponent({
       })
     },
   }),
+})
+
+settingsScreen.lifecycle({
+  onEnter: async ({ app }) => {
+    await app.ui.runAction(UI_ACTIONS.SETTINGS_LOAD)
+  },
+  errorTitle: 'Settings load failed',
+  errorMessage: 'Could not initialize settings page.',
 })

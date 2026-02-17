@@ -4,7 +4,13 @@ import AOS from 'aos'
 import { buildAppContext } from './bootstrap/appBootstrap'
 import { APP_CTX_KEY } from './core/injection'
 import { createAppRouter } from './router'
-import { persistFilterSubscriptions, persistSession, persistTheme } from './state/appState'
+import { ROUTE_NAMES, routeToAuth } from './router/routeSpec'
+import {
+  persistFilterSubscriptions,
+  persistSession,
+  persistTheme,
+  syncUserFilterSubscriptions,
+} from './state/appState'
 
 import 'bootswatch/dist/flatly/bootstrap.min.css'
 import 'bootstrap-icons/font/bootstrap-icons.css'
@@ -15,6 +21,10 @@ import App from './App.vue'
 
 const appCtx = buildAppContext()
 const router = createAppRouter(appCtx)
+const runtime = appCtx.service('runtime')
+const platform = appCtx.service('platform')
+
+await platform.hydrateState()
 
 function applyTheme(theme) {
   const next = String(theme || 'light').toLowerCase() === 'dark' ? 'dark' : 'light'
@@ -31,30 +41,53 @@ AOS.init({
   offset: 18,
 })
 
+await platform.initializeRuntimeLifecycle(runtime)
+await platform.applyStatusBarTheme()
+
 router.afterEach(() => {
   setTimeout(() => {
     AOS.refreshHard()
   }, 0)
+  void runtime.tick({ notify: true })
 })
 
 watch(
   () => [appCtx.state.session.token, appCtx.state.session.user],
   () => {
     persistSession(appCtx.state)
+    void platform.persistSession()
   },
   { deep: true },
+)
+
+watch(
+  () => String(appCtx.state.session.user?.id || '').trim(),
+  () => {
+    if (platform.isNative()) {
+      void platform.syncUserFilterSubscriptions()
+      return
+    }
+    syncUserFilterSubscriptions(appCtx.state)
+  },
+  { immediate: true },
 )
 
 watch(
   () => appCtx.state.session.token,
   (token) => {
     const hasToken = Boolean(String(token || '').trim())
-    if (hasToken) return
+    if (hasToken) {
+      runtime.start()
+      void runtime.tick({ notify: true })
+      return
+    }
+
+    runtime.stop()
 
     const currentRoute = router.currentRoute.value
-    if (String(currentRoute?.name || '') === 'auth') return
+    if (String(currentRoute?.name || '') === ROUTE_NAMES.AUTH) return
     if (currentRoute?.meta?.requiresAuth) {
-      void router.replace({ name: 'auth' })
+      void router.replace(routeToAuth())
     }
   },
   { immediate: true },
@@ -65,6 +98,8 @@ watch(
   () => {
     applyTheme(appCtx.state.ui.theme)
     persistTheme(appCtx.state)
+    void platform.persistTheme()
+    void platform.applyStatusBarTheme()
   },
 )
 
@@ -72,9 +107,16 @@ watch(
   () => appCtx.state.map.filterSubscriptions,
   () => {
     persistFilterSubscriptions(appCtx.state)
+    void platform.persistFilterSubscriptions()
   },
   { deep: true },
 )
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    void platform.disposeRuntimeLifecycle()
+  })
+}
 
 const app = createApp(App)
 app.provide(APP_CTX_KEY, appCtx)

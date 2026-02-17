@@ -1,5 +1,6 @@
 <script setup>
 import SosLoader from './SosLoader.vue'
+import AppTextElement from './AppTextElement.vue'
 
 const props = defineProps({
   label: { type: String, default: '' },
@@ -54,7 +55,7 @@ function buttonClass() {
     </template>
     <template v-else>
       <i v-if="icon" class="bi me-2 action-button__icon" :class="icon"></i>
-      <span class="action-button__label">{{ label }}</span>
+      <AppTextElement as="span" variant="button" class-name="action-button__label" nowrap>{{ label }}</AppTextElement>
     </template>
   </button>
 </template>

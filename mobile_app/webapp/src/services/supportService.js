@@ -1,4 +1,5 @@
 import { ApiStateService } from './baseService'
+import { API_ENDPOINTS } from '../api/registry'
 
 function asText(value) {
   return String(value || '').trim()
@@ -55,7 +56,9 @@ export class SupportService extends ApiStateService {
     const payload = normalizeTicket(input, fallbackEmail)
 
     try {
-      const data = await this.api.post('/social/support/tickets', payload, { token: this.token() })
+      const data = await this.api.request(API_ENDPOINTS.SOCIAL_SUPPORT_TICKETS_CREATE, {
+        body: payload,
+      })
       this.clearError()
       return normalizeCreatedTicket(data)
     } catch (error) {

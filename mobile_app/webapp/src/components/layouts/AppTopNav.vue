@@ -3,6 +3,16 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useApp } from '../../core/injection'
 import { toImageSource } from '../../models/imageMapper'
+import {
+  ROUTE_NAMES,
+  routeToAuth,
+  routeToHome,
+  routeToMap,
+  routeToProfile,
+  routeToSettings,
+  routeToSocial,
+  routeToSupport,
+} from '../../router/routeSpec'
 import ActionButton from '../common/ActionButton.vue'
 import UserProfileCard from '../common/UserProfileCard.vue'
 
@@ -15,12 +25,13 @@ const userMenuOpen = ref(false)
 const isMobile = ref(false)
 const navRoot = ref(null)
 const panelRoot = ref(null)
+const expandedLogEntries = ref({})
 
 const navEntries = computed(() => {
   return [
-    { key: 'social', label: 'Social', icon: 'bi-people', to: { name: 'social' } },
-    { key: 'map', label: 'Map', icon: 'bi-map', to: { name: 'map' } },
-    { key: 'home', label: 'Home', icon: 'bi-house', to: { name: 'home' } },
+    { key: ROUTE_NAMES.SOCIAL, label: 'Social', icon: 'bi-people', to: routeToSocial() },
+    { key: ROUTE_NAMES.MAP, label: 'Map', icon: 'bi-map', to: routeToMap() },
+    { key: ROUTE_NAMES.HOME, label: 'Home', icon: 'bi-house', to: routeToHome() },
   ]
 })
 
@@ -51,7 +62,7 @@ const primaryEntries = computed(() => navEntries.value)
 
 const show = computed(() => {
   if (!app.ui.isAuthenticated()) return false
-  return route.name !== 'auth'
+  return route.name !== ROUTE_NAMES.AUTH
 })
 
 const userAvatar = computed(() => {
@@ -181,12 +192,12 @@ function logout() {
     title: 'Logged out',
     message: 'Session ended.',
   })
-  router.push({ name: 'auth' })
+  router.push(routeToAuth())
 }
 
 function openHome() {
   closePanels()
-  router.push({ name: 'home' })
+  router.push(routeToHome())
 }
 
 function toggleNotifications() {
@@ -202,21 +213,50 @@ function toggleUserMenu() {
 function openMyProfile() {
   const userId = String(me.value?.id || '').trim()
   closePanels()
-  router.push({ name: 'profile', params: { userId } })
+  router.push(routeToProfile(userId))
 }
 
 function openSettings() {
   closePanels()
-  router.push({ name: 'settings' })
+  router.push(routeToSettings())
 }
 
 function openSupport() {
   closePanels()
-  router.push({ name: 'support' })
+  router.push(routeToSupport())
 }
 
 function clearNotificationLog() {
   app.service('notify').clearLog()
+  expandedLogEntries.value = {}
+}
+
+function notificationEntryKey(entry) {
+  const id = String(entry?.id || '').trim()
+  if (id) return id
+  const createdAt = String(entry?.createdAt || '').trim()
+  const title = String(entry?.title || '').trim()
+  return `${createdAt}-${title}`
+}
+
+function notificationDetails(entry) {
+  return String(entry?.details || '').trim()
+}
+
+function hasNotificationDetails(entry) {
+  return Boolean(notificationDetails(entry))
+}
+
+function isNotificationExpanded(entry) {
+  return Boolean(expandedLogEntries.value[notificationEntryKey(entry)])
+}
+
+function toggleNotificationExpanded(entry) {
+  const key = notificationEntryKey(entry)
+  expandedLogEntries.value = {
+    ...expandedLogEntries.value,
+    [key]: !isNotificationExpanded(entry),
+  }
 }
 
 function notificationMessage(entry) {
@@ -308,7 +348,19 @@ function notificationTimestamp(entry) {
                 <strong>{{ entry.title || 'Notification' }}</strong>
                 <span class="small text-secondary">{{ notificationTimestamp(entry) }}</span>
               </div>
-              <p class="small mb-0">{{ notificationMessage(entry) }}</p>
+
+              <p class="small mb-0 app-top-nav__notification-message">{{ notificationMessage(entry) }}</p>
+
+              <div class="app-top-nav__notification-actions" v-if="hasNotificationDetails(entry)">
+                <ActionButton
+                  class-name="btn btn-sm btn-link p-0"
+                  :icon="isNotificationExpanded(entry) ? 'bi-chevron-up' : 'bi-chevron-down'"
+                  :label="isNotificationExpanded(entry) ? 'Hide details' : 'Show details'"
+                  @click="toggleNotificationExpanded(entry)"
+                />
+              </div>
+
+              <pre class="app-top-nav__notification-details" v-if="isNotificationExpanded(entry)">{{ notificationDetails(entry) }}</pre>
             </article>
           </div>
 

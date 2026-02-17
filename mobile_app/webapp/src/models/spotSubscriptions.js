@@ -10,6 +10,10 @@ function sanitizeText(value) {
   return String(value || '').trim()
 }
 
+function sanitizeOwnerUserId(value) {
+  return sanitizeText(value)
+}
+
 function sanitizeRadius(value) {
   return Math.max(0, Number(value) || 0)
 }
@@ -170,15 +174,23 @@ export function snapshotsEqual(previousSnapshot, nextSnapshot) {
   return addedIds.length === 0 && changedIds.length === 0 && removedIds.length === 0
 }
 
-export function createFilterSubscription({ label = '', filters = {}, center = null, snapshot = {} } = {}) {
+export function createFilterSubscription({
+  label = '',
+  filters = {},
+  center = null,
+  snapshot = {},
+  ownerUserId = '',
+} = {}) {
   const normalizedFilters = sanitizeFilters(filters)
   const normalizedCenter = sanitizeCenter(center)
   const normalizedLabel = sanitizeText(label) || defaultLabel(normalizedFilters, normalizedCenter)
   const normalizedSnapshot = sanitizeSnapshot(snapshot)
+  const normalizedOwnerUserId = sanitizeOwnerUserId(ownerUserId)
 
   return {
     id: `sub-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     createdAt: new Date().toISOString(),
+    ownerUserId: normalizedOwnerUserId,
     label: normalizedLabel,
     filters: normalizedFilters,
     center: normalizedCenter,
@@ -197,10 +209,12 @@ export function normalizeFilterSubscription(input) {
   const label = sanitizeText(input.label) || defaultLabel(filters, center)
   const createdAt = sanitizeText(input.createdAt) || new Date().toISOString()
   const snapshot = sanitizeSnapshot(input.snapshot)
+  const ownerUserId = sanitizeOwnerUserId(input.ownerUserId || input.owner_user_id)
 
   return {
     id,
     createdAt,
+    ownerUserId,
     label,
     filters,
     center,

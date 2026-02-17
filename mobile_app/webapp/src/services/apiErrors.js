@@ -1,3 +1,7 @@
+import { API_ENDPOINTS, getApiEndpointBinding } from '../api/registry'
+
+const AUTH_REGISTER_PATH = getApiEndpointBinding(API_ENDPOINTS.AUTH_REGISTER).path
+
 function toText(value) {
   if (value == null) return ''
   return String(value).trim()
@@ -68,7 +72,7 @@ function statusFallback(status) {
 
 function statusFallbackByPath(status, path = '') {
   const normalizedPath = toText(path)
-  if (status === 409 && normalizedPath.includes('/auth/register')) {
+  if (status === 409 && normalizedPath.includes(AUTH_REGISTER_PATH)) {
     return 'Username or email already exists.'
   }
   return statusFallback(status)

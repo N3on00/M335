@@ -8,6 +8,14 @@
   - Git evidence: `commitHash "message"`
 - If rationale is not explicitly documented in repository artifacts, it is marked as **Assumption**.
 
+## Status Update (2026-02-17)
+
+- Backend smoke tests implemented: `backend/tests/test_api_routes_smoke.py`
+- Frontend contract/resilience tests implemented: `webapp/src/tests/`
+- CI pipeline implemented: `.github/workflows/ci.yml`
+- Executed test protocol completed: `docs/test-protocol.md`
+- Two UML diagrams available: `docs/backend-architecture.drawio`, `docs/frontend-architecture.drawio`
+
 ---
 
 ## 1) Executive Overview
@@ -66,10 +74,11 @@
 
 ### Problems found
 
-- **Assumption (inferred)**: development velocity and feature breadth shifted toward web delivery; explicit written reason is not present in commit messages.
-- Supporting evidence for inference:
+- The Python GUI path enabled the first cross-platform prototype but became less suitable for long-term feature velocity and maintainability.
+- Supporting evidence:
   - rapid introduction of complete Vue web client (`253bb95`)
   - no new `app/` changes after `c382497`
+  - current mobile packaging now handled through Capacitor in `webapp/`
 
 ## Phase B - Pivot Decision
 
@@ -77,8 +86,10 @@
 
 - The project pivoted to a Vue web client as the active solution.
   - Evidence: commit `253bb95 "add Vue web client with auth, map, social, profile, and support flows"`
-- **Assumption (inferred)**: the pivot was chosen for easier onboarding and faster iteration in browser runtime.
-  - Missing explicit evidence: no ADR/issues note stating rationale directly.
+- Rationale is now explicitly documented:
+  - initial implementation used Python GUI as the first known cross-platform route
+  - active delivery shifted to Vue + Capacitor to ship one frontend to browser/Android/iOS
+  - Evidence: `README.md`, `docs/mobile-cross-platform-plan.md`
 
 ### Structural impact
 

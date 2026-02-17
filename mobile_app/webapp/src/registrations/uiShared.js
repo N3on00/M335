@@ -1,4 +1,6 @@
 import { toUserErrorMessage } from '../services/apiErrors'
+import { resolveScreenErrorHandler } from '../core/errorHandlerRegistry'
+import { getScreenLifecycle } from '../core/screenRegistry'
 
 function resolve(value, ...args) {
   return typeof value === 'function' ? value(...args) : value
@@ -128,8 +130,44 @@ function _authDropped(app, wasAuthenticated) {
   return Boolean(wasAuthenticated && !_authState(app))
 }
 
+function _activeScreen(app) {
+  return String(app?.state?.ui?.activeScreen || '').trim()
+}
+
+function _resolveDefaultErrorHandlerId(app) {
+  const screen = _activeScreen(app)
+  if (!screen) return 'screen.default'
+
+  const lifecycle = getScreenLifecycle(screen)
+  return String(lifecycle?.errorHandlerId || 'screen.default').trim() || 'screen.default'
+}
+
+function _dispatchError(app, {
+  errorHandlerId = '',
+  title,
+  message,
+  details = '',
+  error = null,
+  level = 'error',
+  scope = 'action',
+}) {
+  const handlerId = String(errorHandlerId || '').trim() || _resolveDefaultErrorHandlerId(app)
+  const handler = resolveScreenErrorHandler(handlerId, app)
+  handler.handle({
+    level,
+    title,
+    message,
+    details,
+    error,
+    scope,
+    screen: _activeScreen(app),
+    route: null,
+  })
+}
+
 export function observeAction(app, {
   loadingKey = '',
+  errorHandlerId = '',
   errorTitle = 'Action failed',
   errorMessage = 'Please try again.',
   errorDetails,
@@ -148,12 +186,13 @@ export function observeAction(app, {
 
       if (!pass) {
         const details = toDetails(resolve(errorDetails, result) || '')
-        notifyError(
-          app,
-          resolveText(errorTitle, 'Action failed', result),
-          resolveText(errorMessage, 'Please try again.', result),
+        _dispatchError(app, {
+          errorHandlerId,
+          title: resolveText(errorTitle, 'Action failed', result),
+          message: resolveText(errorMessage, 'Please try again.', result),
           details,
-        )
+          scope: 'action',
+        })
         return result
       }
 
@@ -178,12 +217,14 @@ export function observeAction(app, {
       }
 
       const details = toDetails(resolve(errorDetails, error) || error?.message || error)
-      notifyError(
-        app,
-        resolveText(errorTitle, 'Action failed', error),
-        resolveText(errorMessage, 'Please try again.', error),
+      _dispatchError(app, {
+        errorHandlerId,
+        title: resolveText(errorTitle, 'Action failed', error),
+        message: resolveText(errorMessage, 'Please try again.', error),
         details,
-      )
+        error,
+        scope: 'action',
+      })
       return null
     } finally {
       _endLoading(app, loadingKey)
@@ -204,6 +245,7 @@ export function controllerLastError(app, controllerId) {
 export async function runTask(app, {
   task,
   loadingKey = '',
+  errorHandlerId = '',
   errorTitle = 'Action failed',
   errorMessage = 'Please try again.',
   errorDetails,
@@ -235,12 +277,14 @@ export async function runTask(app, {
     }
 
     const details = toDetails(resolve(errorDetails, error) || error?.message || error)
-    notifyError(
-      app,
-      resolveText(errorTitle, 'Action failed', error),
-      resolveText(errorMessage, 'Please try again.', error),
+    _dispatchError(app, {
+      errorHandlerId,
+      title: resolveText(errorTitle, 'Action failed', error),
+      message: resolveText(errorMessage, 'Please try again.', error),
       details,
-    )
+      error,
+      scope: 'action',
+    })
     return { ok: false, error }
   } finally {
     _endLoading(app, loadingKey)
@@ -250,6 +294,7 @@ export async function runTask(app, {
 export async function runBooleanAction(app, {
   action,
   loadingKey = '',
+  errorHandlerId = '',
   errorTitle,
   errorMessage,
   errorDetails,
@@ -261,6 +306,7 @@ export async function runBooleanAction(app, {
   const { ok, result } = await runTask(app, {
     task: action,
     loadingKey,
+    errorHandlerId,
     errorTitle,
     errorMessage,
     errorDetails,
@@ -272,12 +318,13 @@ export async function runBooleanAction(app, {
 
   if (!result) {
     const details = toDetails(resolve(errorDetails, result) || '')
-    notifyError(
-      app,
-      resolveText(errorTitle, 'Action failed', result),
-      resolveText(errorMessage, 'Please try again.', result),
+    _dispatchError(app, {
+      errorHandlerId,
+      title: resolveText(errorTitle, 'Action failed', result),
+      message: resolveText(errorMessage, 'Please try again.', result),
       details,
-    )
+      scope: 'action',
+    })
     return false
   }
 

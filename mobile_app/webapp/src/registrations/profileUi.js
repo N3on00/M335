@@ -1,7 +1,12 @@
-import { registerAction, registerComponent } from '../core/registry'
+import { createScreenModule } from '../core/screenRegistry'
+import { ProfileScreenErrorHandler } from '../core/errorHandlerRegistry'
+import { UI_ACTIONS, UI_COMPONENT_IDS, UI_SCREENS } from '../core/uiElements'
+import { routeToMap, routeToProfile, routeToSettings } from '../router/routeSpec'
 import ProfileHero from '../components/profile/ProfileHero.vue'
 import ProfileSummary from '../components/profile/ProfileSummary.vue'
 import { notify } from './uiShared'
+
+class ProfilePageErrorHandler extends ProfileScreenErrorHandler {}
 
 async function loadProfileState(app, targetId) {
   const userId = String(targetId || app.state.session.user?.id || '').trim()
@@ -29,23 +34,27 @@ async function loadProfileState(app, targetId) {
   app.state.social.following = Array.isArray(following) ? following : []
 }
 
-registerAction('profile.refresh', async ({ app, payload }) => {
+const profileScreen = createScreenModule(UI_SCREENS.PROFILE)
+
+profileScreen.errorHandler({
+  id: 'screen.profile.page',
+  handlerClass: ProfilePageErrorHandler,
+  useForRoute: true,
+})
+
+profileScreen.action(UI_ACTIONS.PROFILE_REFRESH, async ({ app, payload }) => {
   const targetId = payload && typeof payload === 'object' ? payload.userId : ''
   await loadProfileState(app, targetId)
 })
 
-registerComponent({
-  screen: 'profile',
-  slot: 'header',
-  id: 'profile.hero',
+profileScreen.header({
+  id: UI_COMPONENT_IDS.PROFILE_HERO,
   order: 10,
   component: ProfileHero,
 })
 
-registerComponent({
-  screen: 'profile',
-  slot: 'main',
-  id: 'profile.summary',
+profileScreen.main({
+  id: UI_COMPONENT_IDS.PROFILE_SUMMARY,
   order: 10,
   component: ProfileSummary,
   buildProps: ({ app, router }) => ({
@@ -129,14 +138,7 @@ registerComponent({
         return
       }
 
-      router.push({
-        name: 'map',
-        query: {
-          lat: String(lat),
-          lon: String(lon),
-          spotId,
-        },
-      })
+      router.push(routeToMap({ lat, lon, spotId }))
     },
     onToggleFavorite: async (spotId, currentlyFavorite) => {
       const ok = await app.controller('social').toggleFavorite(spotId, currentlyFavorite)
@@ -161,11 +163,30 @@ registerComponent({
       return app.controller('users').profile(userId)
     },
     onOpenProfile: (userId) => {
-      router.push(`/profile/${userId}`)
+      router.push(routeToProfile(userId))
     },
     onEditProfile: () => {
-      router.push('/settings')
+      router.push(routeToSettings())
     },
     onNotify: (payload) => notify(app, payload),
   }),
+})
+
+profileScreen.lifecycle({
+  onEnter: async ({ app, route }) => {
+    await app.ui.runAction(UI_ACTIONS.PROFILE_REFRESH, {
+      userId: String(route.params?.userId || ''),
+    })
+  },
+  onRouteChange: async ({ app, route, previousRoute }) => {
+    const nextId = String(route.params?.userId || '')
+    const prevId = String(previousRoute?.params?.userId || '')
+    if (nextId === prevId) return
+
+    await app.ui.runAction(UI_ACTIONS.PROFILE_REFRESH, { userId: nextId })
+  },
+  errorTitle: 'Profile load failed',
+  errorMessage: 'Could not initialize profile page.',
+  routeErrorTitle: 'Profile refresh failed',
+  routeErrorMessage: 'Could not refresh this profile.',
 })

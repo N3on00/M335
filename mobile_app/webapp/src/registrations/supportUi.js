@@ -1,20 +1,19 @@
-import { registerComponent } from '../core/registry'
+import { createScreenModule } from '../core/screenRegistry'
+import { UI_COMPONENT_IDS, UI_SCREENS } from '../core/uiElements'
 import SupportHero from '../components/support/SupportHero.vue'
 import SupportForm from '../components/support/SupportForm.vue'
 import { controllerLastError, runBooleanAction } from './uiShared'
 
-registerComponent({
-  screen: 'support',
-  slot: 'header',
-  id: 'support.hero',
+const supportScreen = createScreenModule(UI_SCREENS.SUPPORT)
+
+supportScreen.header({
+  id: UI_COMPONENT_IDS.SUPPORT_HERO,
   order: 10,
   component: SupportHero,
 })
 
-registerComponent({
-  screen: 'support',
-  slot: 'main',
-  id: 'support.form',
+supportScreen.main({
+  id: UI_COMPONENT_IDS.SUPPORT_FORM,
   order: 10,
   component: SupportForm,
   buildProps: ({ app, router }) => ({

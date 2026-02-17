@@ -163,7 +163,17 @@ Current gap evidence: `webapp/src/services/apiClient.js:39`
 - Keep current unversioned paths as compatibility aliases temporarily.
 - Mark deprecation in docs and remove after one release cycle.
 
-## 7) Short Request Examples
+## 7) Rate-Limiting Strategy
+
+- Application-level limiting is intentionally kept simple in the backend app layer.
+- Production rate limiting is enforced at the edge/proxy layer (for example Nginx/API gateway/WAF).
+- Suggested baseline:
+  - `/auth/login`, `/auth/register`: strict burst + minute limits
+  - `/social/support/tickets`: medium write throttling
+  - read endpoints: softer limits with higher burst allowance
+- This keeps throttling centralized and deployment-specific without coupling business logic to one runtime.
+
+## 8) Short Request Examples
 
 ## Register
 

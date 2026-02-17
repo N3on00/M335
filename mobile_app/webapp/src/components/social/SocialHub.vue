@@ -33,6 +33,15 @@ const tabUsers = computed(() => {
   return props.incomingRequests
 })
 
+const followingIds = computed(() => {
+  const out = new Set()
+  for (const entry of Array.isArray(props.following) ? props.following : []) {
+    const id = userId(entry)
+    if (id) out.add(id)
+  }
+  return out
+})
+
 function displayName(user) {
   const source = user?.follower || user
   return String(source?.display_name || source?.username || 'Unknown user')
@@ -58,6 +67,12 @@ function avatarSource(user) {
 
 function submitSearch() {
   props.onSearch(searchText.value)
+}
+
+function isFollowingUser(user) {
+  const id = userId(user)
+  if (!id) return false
+  return followingIds.value.has(id)
 }
 </script>
 
@@ -100,8 +115,18 @@ function submitSearch() {
           </div>
           <div class="social-user-row__actions">
             <ActionButton class-name="btn btn-sm btn-outline-secondary" label="Profile" @click="onOpenProfile(userId(user))" />
-            <ActionButton class-name="btn btn-sm btn-primary" label="Follow" @click="onFollow(userId(user))" />
-            <ActionButton class-name="btn btn-sm btn-outline-primary" label="Unfollow" @click="onUnfollow(userId(user))" />
+            <ActionButton
+              v-if="!isFollowingUser(user)"
+              class-name="btn btn-sm btn-primary"
+              label="Follow"
+              @click="onFollow(userId(user))"
+            />
+            <ActionButton
+              v-else
+              class-name="btn btn-sm btn-outline-primary"
+              label="Unfollow"
+              @click="onUnfollow(userId(user))"
+            />
             <ActionButton class-name="btn btn-sm btn-outline-danger" label="Block" @click="onBlock(userId(user))" />
           </div>
         </article>

@@ -77,3 +77,25 @@ def mongo_entity(
         return model_cls
 
     return decorator
+
+
+def mongo_entity_encrypted(
+    *,
+    collection: str,
+    prefix: str | None = None,
+    tags: list[str] | None = None,
+) -> Callable[[Type[T]], Type[T]]:
+    """Convenience decorator: authenticated mongo entity with auth/jwt checks.
+
+    Uses the existing generic decorator/router stack and the auth logic from auth_routes.
+    """
+
+    from routing.auth_routes import get_current_user
+
+    return mongo_entity(
+        collection=collection,
+        prefix=prefix,
+        tags=tags,
+        authenticated=True,
+        auth_dependency=get_current_user,
+    )

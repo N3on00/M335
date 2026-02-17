@@ -1,8 +1,9 @@
 <script setup>
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import ActionButton from '../common/ActionButton.vue'
 import SpotDetailsModal from '../map/SpotDetailsModal.vue'
 import SpotMiniCard from '../common/SpotMiniCard.vue'
+import { useOwnerProfiles } from '../../composables/useOwnerProfiles'
 
 const props = defineProps({
   spots: { type: Array, default: () => [] },
@@ -19,8 +20,7 @@ const props = defineProps({
 const favoritesSet = computed(() => new Set((props.favorites || []).map((x) => String(x))))
 const detailsOpen = ref(false)
 const selectedSpot = ref(null)
-const ownerProfiles = reactive({})
-const ownerLoading = reactive({})
+const { ownerLabel, warmOwnerProfiles } = useOwnerProfiles((ownerId) => props.onLoadUserProfile(ownerId))
 
 const listedSpots = computed(() => {
   return [...props.spots]
@@ -40,57 +40,6 @@ function isFavorite(spot) {
   const id = String(spot?.id || '')
   if (!id) return false
   return favoritesSet.value.has(id)
-}
-
-function ownerProfileOf(spot) {
-  const ownerId = String(spot?.owner_id || '').trim()
-  if (!ownerId) return null
-  return ownerProfiles[ownerId] || null
-}
-
-function ownerLabel(spot) {
-  const ownerId = String(spot?.owner_id || '').trim()
-  if (!ownerId) return 'unknown creator'
-
-  if (ownerLoading[ownerId]) {
-    return 'loading creator...'
-  }
-
-  const profile = ownerProfileOf(spot)
-  const username = String(profile?.username || '').trim()
-  if (username) {
-    return `@${username}`
-  }
-
-  const displayName = String(profile?.display_name || '').trim()
-  if (displayName) {
-    return displayName
-  }
-
-  return `id: ${ownerId}`
-}
-
-async function warmOwnerProfiles(spots) {
-  const ownerIds = [...new Set(
-    (Array.isArray(spots) ? spots : [])
-      .map((spot) => String(spot?.owner_id || '').trim())
-      .filter(Boolean),
-  )]
-
-  await Promise.all(
-    ownerIds.map(async (ownerId) => {
-      if (ownerLoading[ownerId]) return
-      if (ownerId in ownerProfiles) return
-
-      ownerLoading[ownerId] = true
-      try {
-        const profile = await props.onLoadUserProfile(ownerId)
-        ownerProfiles[ownerId] = profile && typeof profile === 'object' ? profile : null
-      } finally {
-        ownerLoading[ownerId] = false
-      }
-    }),
-  )
 }
 
 function openSpotDetails(spot) {
@@ -137,11 +86,13 @@ function goToSpot(spot) {
         />
       </header>
 
-      <div class="spot-feed" v-if="listedSpots.length">
+      <div class="spot-feed spot-feed--discover-compact" v-if="listedSpots.length">
         <SpotMiniCard
           v-for="spot in listedSpots"
           :key="spot.id || `${spot.title}-${spot.lat}-${spot.lon}`"
           :spot="spot"
+          :description-max-length="88"
+          :max-tags="0"
           :owner-label="ownerLabel(spot)"
           :is-favorite="isFavorite(spot)"
           :interactive="true"

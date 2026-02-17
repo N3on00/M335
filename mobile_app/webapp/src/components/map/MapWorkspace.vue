@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, reactive, ref, watch } from 'vue'
 
 import LeafletSpotMap from './LeafletSpotMap.vue'
 import SpotEditorModal from './SpotEditorModal.vue'
@@ -13,25 +13,21 @@ import {
   createSubscriptionSnapshot,
   normalizeFilterSubscription,
 } from '../../models/spotSubscriptions'
+import { buildSpotSharePayload } from '../../models/spotSharePayload'
+import { resolveGoToSpot } from '../../models/mapSpotNavigation'
+import { useOwnerProfiles } from '../../composables/useOwnerProfiles'
 
 const SPOT_PAGE_SIZE = 10
 
 const props = defineProps({
   state: { type: Object, required: true },
   focusRequest: { type: Object, default: () => ({ lat: null, lon: null, spotId: '' }) },
-  onInit: { type: Function, required: true },
-  onReload: { type: Function, required: true },
-  onSaveSpot: { type: Function, required: true },
-  onDeleteSpot: { type: Function, required: true },
-  onToggleFavorite: { type: Function, required: true },
-  onShareSpot: { type: Function, required: true },
-  onSearchUsers: { type: Function, required: true },
-  onLoadFriendUsers: { type: Function, required: true },
-  onLoadUserProfile: { type: Function, required: true },
-  onSearchLocations: { type: Function, required: true },
-  onOpenProfile: { type: Function, required: true },
-  onNotify: { type: Function, required: true },
+  behavior: { type: Object, required: true },
 })
+
+const { ownerLabel, ownerSearchText, warmOwnerProfiles } = useOwnerProfiles(
+  (ownerId) => props.behavior.loadUserProfile(ownerId),
+)
 
 function defaultSpotFilters() {
   return {
@@ -64,6 +60,27 @@ function sanitizeSpotFilters(source) {
   }
 }
 
+function normalizeSubscriptionForUser(entry, fallbackOwnerUserId = '') {
+  const normalized = normalizeFilterSubscription(entry)
+  if (!normalized) return null
+
+  const ownerUserId = String(normalized.ownerUserId || '').trim() || String(fallbackOwnerUserId || '').trim()
+  return {
+    ...normalized,
+    ownerUserId,
+  }
+}
+
+function ownedSubscriptions(entries, ownerUserId) {
+  const owner = String(ownerUserId || '').trim()
+  if (!owner) return []
+
+  return (Array.isArray(entries) ? entries : [])
+    .map((entry) => normalizeSubscriptionForUser(entry, owner))
+    .filter(Boolean)
+    .filter((entry) => String(entry.ownerUserId || '').trim() === owner)
+}
+
 const detailsOpen = ref(false)
 const editorOpen = ref(false)
 const editorMode = ref('create')
@@ -75,12 +92,10 @@ const locationSearchBusy = ref(false)
 const locationSearchError = ref('')
 const locationResults = ref([])
 const activeLocation = ref(null)
+const mapViewportAnchor = ref(null)
 const visibleSpotCount = ref(SPOT_PAGE_SIZE)
 const spotResultsExpanded = ref(true)
 const lastFocusSignature = ref('')
-
-const ownerProfiles = reactive({})
-const ownerLoading = reactive({})
 
 const editorDraft = reactive({
   id: '',
@@ -96,14 +111,13 @@ const editorDraft = reactive({
 
 const spotFilters = reactive(defaultSpotFilters())
 
+const currentUserId = computed(() => String(props.state.session?.user?.id || '').trim())
 const favoritesSet = computed(() => new Set((props.state.favorites || []).map((id) => String(id))))
 const filterSubscriptions = computed(() => {
-  const source = Array.isArray(props.state.map?.filterSubscriptions)
-    ? props.state.map.filterSubscriptions
-    : []
-  return source
-    .map((entry) => normalizeFilterSubscription(entry))
-    .filter(Boolean)
+  const ownerUserId = currentUserId.value
+  if (!ownerUserId) return []
+
+  return ownedSubscriptions(props.state.map?.filterSubscriptions, ownerUserId)
 })
 
 const selectedSpotIsOwner = computed(() => {
@@ -240,59 +254,6 @@ function tokenize(text) {
     .filter(Boolean)
 }
 
-function ownerSearchText(spot) {
-  const ownerId = String(spot?.owner_id || '').trim()
-  const profile = ownerId ? ownerProfiles[ownerId] : null
-  return [ownerId, profile?.username, profile?.display_name, profile?.email]
-    .map((entry) => String(entry || '').toLowerCase())
-    .join(' ')
-}
-
-function ownerLabel(spot) {
-  const ownerId = String(spot?.owner_id || '').trim()
-  if (!ownerId) return 'unknown creator'
-
-  if (ownerLoading[ownerId]) {
-    return 'loading creator...'
-  }
-
-  const profile = ownerProfiles[ownerId]
-  const username = String(profile?.username || '').trim()
-  if (username) {
-    return `@${username}`
-  }
-
-  const displayName = String(profile?.display_name || '').trim()
-  if (displayName) {
-    return displayName
-  }
-
-  return `id: ${ownerId}`
-}
-
-async function warmOwnerProfiles(spots) {
-  const ownerIds = [...new Set(
-    (Array.isArray(spots) ? spots : [])
-      .map((spot) => String(spot?.owner_id || '').trim())
-      .filter(Boolean),
-  )]
-
-  await Promise.all(
-    ownerIds.map(async (ownerId) => {
-      if (ownerLoading[ownerId]) return
-      if (ownerId in ownerProfiles) return
-
-      ownerLoading[ownerId] = true
-      try {
-        const profile = await props.onLoadUserProfile(ownerId)
-        ownerProfiles[ownerId] = profile && typeof profile === 'object' ? profile : null
-      } finally {
-        ownerLoading[ownerId] = false
-      }
-    }),
-  )
-}
-
 function radiusCenter() {
   if (activeLocation.value) {
     return [Number(activeLocation.value.lat), Number(activeLocation.value.lon)]
@@ -414,6 +375,16 @@ function currentSubscriptionCenter() {
 }
 
 function subscribeCurrentFilters() {
+  const ownerUserId = currentUserId.value
+  if (!ownerUserId) {
+    props.behavior.notify({
+      level: 'warning',
+      title: 'Sign in required',
+      message: 'Please sign in again before creating filter subscriptions.',
+    })
+    return
+  }
+
   const baselineSnapshot = createSubscriptionSnapshot(filteredSpots.value)
 
   const sub = createFilterSubscription({
@@ -421,19 +392,16 @@ function subscribeCurrentFilters() {
     center: currentSubscriptionCenter(),
     label: '',
     snapshot: baselineSnapshot,
+    ownerUserId,
   })
 
-  const out = Array.isArray(props.state.map.filterSubscriptions)
-    ? [...props.state.map.filterSubscriptions]
-    : []
+  const out = ownedSubscriptions(props.state.map?.filterSubscriptions, ownerUserId)
 
   const signature = JSON.stringify({ filters: sub.filters, center: sub.center })
   const alreadyExists = out
-    .map((entry) => normalizeFilterSubscription(entry))
-    .filter(Boolean)
     .some((entry) => JSON.stringify({ filters: entry.filters, center: entry.center }) === signature)
   if (alreadyExists) {
-    props.onNotify({
+    props.behavior.notify({
       level: 'info',
       title: 'Already subscribed',
       message: 'This filter is already in your subscriptions.',
@@ -444,7 +412,7 @@ function subscribeCurrentFilters() {
   out.push(sub)
   props.state.map.filterSubscriptions = out
 
-  props.onNotify({
+  props.behavior.notify({
     level: 'success',
     title: 'Filter subscribed',
     message: `Saved current result (${Object.keys(baselineSnapshot).length} spots) for: ${sub.label}`,
@@ -453,13 +421,17 @@ function subscribeCurrentFilters() {
 }
 
 function removeFilterSubscription(subId) {
-  const source = Array.isArray(props.state.map.filterSubscriptions)
-    ? props.state.map.filterSubscriptions
-    : []
-  const next = source.filter((entry) => String(entry?.id || '') !== String(subId || ''))
+  const ownerUserId = currentUserId.value
+  const next = ownedSubscriptions(props.state.map?.filterSubscriptions, ownerUserId)
+    .filter((entry) => {
+      const isSameOwner = String(entry.ownerUserId || '').trim() === ownerUserId
+      const isTarget = String(entry.id || '') === String(subId || '')
+      return !(isSameOwner && isTarget)
+    })
+
   props.state.map.filterSubscriptions = next
 
-  props.onNotify({
+  props.behavior.notify({
     level: 'info',
     title: 'Subscription removed',
     message: 'This map filter subscription was deleted.',
@@ -467,8 +439,9 @@ function removeFilterSubscription(subId) {
 }
 
 function applyFilterSubscription(subscription) {
-  const sub = normalizeFilterSubscription(subscription)
+  const sub = normalizeSubscriptionForUser(subscription, currentUserId.value)
   if (!sub) return
+  if (String(sub.ownerUserId || '').trim() !== currentUserId.value) return
 
   Object.assign(spotFilters, sanitizeSpotFilters(sub.filters))
 
@@ -488,7 +461,7 @@ function applyFilterSubscription(subscription) {
 
   visibleSpotCount.value = SPOT_PAGE_SIZE
 
-  props.onNotify({
+  props.behavior.notify({
     level: 'info',
     title: 'Subscription applied',
     message: `Applied filter: ${sub.label}`,
@@ -564,15 +537,37 @@ function openSpotFromList(spot) {
 }
 
 function goToSpot(spot) {
-  const lat = Number(spot?.lat)
-  const lon = Number(spot?.lon)
-  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return
+  detailsOpen.value = false
+  const target = resolveGoToSpot(spot, props.state.map.zoom, 14)
+  if (!target) {
+    selectedSpot.value = spot
+    return
+  }
 
-  props.state.map.center = [lat, lon]
-  props.state.map.zoom = Math.max(14, Number(props.state.map.zoom || 12))
+  props.state.map.center = target.center
+  props.state.map.zoom = target.zoom
 
   selectedSpot.value = spot
-  detailsOpen.value = true
+  void nextTick(() => {
+    scrollMapIntoView()
+  })
+}
+
+function scrollMapIntoView() {
+  const host = mapViewportAnchor.value
+  if (!host || typeof host.scrollIntoView !== 'function') {
+    return
+  }
+
+  const reduceMotion = typeof window !== 'undefined'
+    && typeof window.matchMedia === 'function'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+  host.scrollIntoView({
+    behavior: reduceMotion ? 'auto' : 'smooth',
+    block: 'start',
+    inline: 'nearest',
+  })
 }
 
 function onViewportChange(center, zoom) {
@@ -581,33 +576,87 @@ function onViewportChange(center, zoom) {
 }
 
 async function saveSpot(spot) {
-  const ok = await props.onSaveSpot(spot)
+  const ok = await props.behavior.saveSpot(spot)
   if (!ok) return
   editorOpen.value = false
-  await props.onReload()
 }
 
 async function deleteSpot() {
   if (!selectedSpot.value?.id) return
-  const ok = await props.onDeleteSpot(selectedSpot.value.id)
+  const ok = await props.behavior.deleteSpot(selectedSpot.value.id)
   if (!ok) return
   detailsOpen.value = false
-  await props.onReload()
 }
 
 async function toggleFavorite() {
   if (!selectedSpot.value?.id) return
-  await props.onToggleFavorite(selectedSpot.value.id, isFavorite(selectedSpot.value))
+  await props.behavior.toggleFavorite(selectedSpot.value.id, isFavorite(selectedSpot.value))
 }
 
 async function toggleFavoriteForSpot(spot) {
   if (!spot?.id) return
-  await props.onToggleFavorite(String(spot.id), isFavorite(spot))
+  await props.behavior.toggleFavorite(String(spot.id), isFavorite(spot))
 }
 
 async function shareSpot(message) {
-  if (!selectedSpot.value?.id) return false
-  return props.onShareSpot(selectedSpot.value.id, message)
+  const spot = selectedSpot.value
+  const spotId = String(spot?.id || '').trim()
+  if (!spotId) return false
+
+  const sharePayload = buildSpotSharePayload(
+    spot,
+    message,
+    typeof window !== 'undefined' ? window.location.origin : '',
+  )
+
+  const backendShared = await props.behavior.shareSpot(spotId, String(message || ''))
+  const externalShareResult = await shareExternally(sharePayload)
+
+  if (externalShareResult === 'copied') {
+    props.behavior.notify({
+      level: 'info',
+      title: 'Link copied',
+      message: 'Spot link copied to clipboard.',
+    })
+  }
+
+  if (!backendShared && (externalShareResult === 'shared' || externalShareResult === 'copied')) {
+    props.behavior.notify({
+      level: 'warning',
+      title: 'Shared locally only',
+      message: 'Spot was shared from this device, but backend share logging failed.',
+    })
+    return true
+  }
+
+  return backendShared
+}
+
+async function shareExternally(payload) {
+  if (typeof navigator === 'undefined') return ''
+
+  if (typeof navigator.share === 'function') {
+    try {
+      await navigator.share(payload)
+      return 'shared'
+    } catch (error) {
+      if (String(error?.name || '') === 'AbortError') {
+        return 'cancelled'
+      }
+    }
+  }
+
+  const shareUrl = String(payload?.url || '').trim()
+  if (shareUrl && navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      return 'copied'
+    } catch {
+      return ''
+    }
+  }
+
+  return ''
 }
 
 function pickLocationFromEditor(draft) {
@@ -625,7 +674,7 @@ function pickLocationFromEditor(draft) {
 
   editorOpen.value = false
   pickMode.value = true
-  props.onNotify({
+  props.behavior.notify({
     level: 'info',
     title: 'Pick location',
     message: 'Click on the map to set a new location.',
@@ -649,7 +698,7 @@ function editFromDetails() {
 function openOwnerProfile(userId) {
   const nextId = String(userId || '').trim()
   if (!nextId) return
-  props.onOpenProfile(nextId)
+  props.behavior.openProfile(nextId)
 }
 
 async function searchLocations() {
@@ -663,7 +712,7 @@ async function searchLocations() {
   locationResults.value = []
 
   try {
-    const out = await props.onSearchLocations(query, 7)
+    const out = await props.behavior.searchLocations(query, 7)
     const results = Array.isArray(out) ? out : []
     locationResults.value = results
     if (!results.length) {
@@ -685,7 +734,7 @@ function selectLocation(result) {
   props.state.map.zoom = Math.max(14, Number(props.state.map.zoom || 12))
   visibleSpotCount.value = SPOT_PAGE_SIZE
 
-  props.onNotify({
+  props.behavior.notify({
     level: 'info',
     title: 'Location selected',
     message: `Map moved to ${result.label}.`,
@@ -701,19 +750,25 @@ function loadMoreSpots() {
   visibleSpotCount.value += SPOT_PAGE_SIZE
 }
 
-onMounted(async () => {
-  try {
-    await props.onInit()
-    applyFocusRequest(props.focusRequest)
-  } catch (e) {
-    props.onNotify({
-      level: 'error',
-      title: 'Map init failed',
-      message: 'Could not load map data from backend.',
-      details: String(e?.message || e),
-    })
-  }
-})
+async function onReload() {
+  await props.behavior.reload()
+}
+
+function onSearchUsers(query, limit = 20) {
+  return props.behavior.searchUsers(query, limit)
+}
+
+function onLoadFriendUsers() {
+  return props.behavior.loadFriendUsers()
+}
+
+function onLoadUserProfile(userId) {
+  return props.behavior.loadUserProfile(userId)
+}
+
+function onNotify(payload) {
+  props.behavior.notify(payload)
+}
 </script>
 
 <template>
@@ -743,6 +798,7 @@ onMounted(async () => {
       :total-count="state.spots.length"
       :can-reset="hasActiveSpotFilters"
       :subscriptions="filterSubscriptions"
+      :initial-expanded="false"
       @update:filters="updateSpotFilters"
       @reset="resetSpotFilters"
       @subscribe="subscribeCurrentFilters"
@@ -831,14 +887,16 @@ onMounted(async () => {
       @clear="clearLocationFilter"
     />
 
-    <LeafletSpotMap
-      :spots="filteredSpots"
-      :center="state.map.center"
-      :zoom="state.map.zoom"
-      :on-map-tap="onMapTap"
-      :on-marker-select="onMarkerSelect"
-      :on-viewport-change="onViewportChange"
-    />
+    <div ref="mapViewportAnchor">
+      <LeafletSpotMap
+        :spots="filteredSpots"
+        :center="state.map.center"
+        :zoom="state.map.zoom"
+        :on-map-tap="onMapTap"
+        :on-marker-select="onMarkerSelect"
+        :on-viewport-change="onViewportChange"
+      />
+    </div>
 
     <SpotEditorModal
       :open="editorOpen"

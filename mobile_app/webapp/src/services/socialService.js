@@ -1,10 +1,44 @@
 import { extractSpotId } from '../models/spotMapper'
 import { normalizeUser } from '../models/userMapper'
+import { API_ENDPOINTS } from '../api/registry'
 import { ApiStateService } from './baseService'
+
+function asText(value) {
+  return String(value || '').trim()
+}
+
+function uniqueIds(items) {
+  const out = []
+  const seen = new Set()
+  for (const item of Array.isArray(items) ? items : []) {
+    const id = asText(item)
+    if (!id || seen.has(id)) continue
+    seen.add(id)
+    out.push(id)
+  }
+  return out
+}
 
 export class SocialService extends ApiStateService {
   constructor(api, state) {
     super(api, state, { serviceName: 'social' })
+  }
+
+  async _userProfilesByIds(userIds) {
+    const ids = uniqueIds(userIds)
+    const rows = await Promise.all(
+      ids.map(async (id) => {
+        try {
+          const data = await this.api.request(API_ENDPOINTS.SOCIAL_USERS_PROFILE, {
+            params: { userId: id },
+          })
+          return normalizeUser(data)
+        } catch {
+          return null
+        }
+      }),
+    )
+    return rows.filter(Boolean)
   }
 
   async loadFavorites() {
@@ -14,10 +48,13 @@ export class SocialService extends ApiStateService {
       return []
     }
     try {
-      const data = await this.api.get('/social/favorites', { token: this.token() })
-      this.state.favorites = Array.isArray(data)
-        ? data.map((x) => extractSpotId(x)).filter(Boolean)
+      const data = await this.api.request(API_ENDPOINTS.SOCIAL_FAVORITES_LIST)
+      const spotIds = Array.isArray(data)
+        ? data
+          .map((x) => asText(x?.spot_id) || extractSpotId(x))
+          .filter(Boolean)
         : []
+      this.state.favorites = uniqueIds(spotIds)
       this.clearError()
       return this.state.favorites
     } catch (error) {
@@ -29,7 +66,10 @@ export class SocialService extends ApiStateService {
 
   async favoriteSpot(spotId) {
     try {
-      await this.api.post(`/social/favorites/${spotId}`, {}, { token: this.token() })
+      await this.api.request(API_ENDPOINTS.SOCIAL_FAVORITES_CREATE, {
+        params: { spotId },
+        body: {},
+      })
       if (!this.state.favorites.includes(spotId)) {
         this.state.favorites.push(spotId)
       }
@@ -43,7 +83,9 @@ export class SocialService extends ApiStateService {
 
   async unfavoriteSpot(spotId) {
     try {
-      await this.api.delete(`/social/favorites/${spotId}`, { token: this.token() })
+      await this.api.request(API_ENDPOINTS.SOCIAL_FAVORITES_DELETE, {
+        params: { spotId },
+      })
       this.state.favorites = this.state.favorites.filter((id) => id !== spotId)
       this.clearError()
       return true
@@ -55,7 +97,10 @@ export class SocialService extends ApiStateService {
 
   async shareSpot(spotId, message) {
     try {
-      await this.api.post(`/social/share/${spotId}`, { message: message || '' }, { token: this.token() })
+      await this.api.request(API_ENDPOINTS.SOCIAL_SHARE_SPOT, {
+        params: { spotId },
+        body: { message: message || '' },
+      })
       this.clearError()
       return true
     } catch (error) {
@@ -66,7 +111,10 @@ export class SocialService extends ApiStateService {
 
   async followUser(userId) {
     try {
-      const data = await this.api.post(`/social/follow/${userId}`, {}, { token: this.token() })
+      const data = await this.api.request(API_ENDPOINTS.SOCIAL_FOLLOW_USER, {
+        params: { userId },
+        body: {},
+      })
       const status = String(data?.status || 'following').toLowerCase()
       this.clearError()
       if (status === 'pending') {
@@ -81,7 +129,9 @@ export class SocialService extends ApiStateService {
 
   async unfollowUser(userId) {
     try {
-      await this.api.delete(`/social/follow/${userId}`, { token: this.token() })
+      await this.api.request(API_ENDPOINTS.SOCIAL_UNFOLLOW_USER, {
+        params: { userId },
+      })
       this.clearError()
       return true
     } catch (error) {
@@ -92,7 +142,9 @@ export class SocialService extends ApiStateService {
 
   async removeFollower(userId) {
     try {
-      await this.api.delete(`/social/followers/${userId}`, { token: this.token() })
+      await this.api.request(API_ENDPOINTS.SOCIAL_REMOVE_FOLLOWER, {
+        params: { userId },
+      })
       this.clearError()
       return true
     } catch (error) {
@@ -103,13 +155,26 @@ export class SocialService extends ApiStateService {
 
   async incomingFollowRequests() {
     try {
-      const data = await this.api.get('/social/follow/requests', { token: this.token() })
+      const data = await this.api.request(API_ENDPOINTS.SOCIAL_FOLLOW_REQUESTS_LIST)
       this.clearError()
       if (!Array.isArray(data)) return []
-      return data.map((entry) => ({
-        ...entry,
-        follower: normalizeUser(entry?.follower),
-      }))
+
+      const followerIds = uniqueIds(data.map((entry) => asText(entry?.follower_id)))
+      const users = await this._userProfilesByIds(followerIds)
+      const userById = new Map(users.map((user) => [asText(user?.id), user]))
+
+      return data
+        .map((entry) => {
+          const followerId = asText(entry?.follower_id)
+          const follower = userById.get(followerId)
+          if (!followerId || !follower) return null
+          return {
+            follower_id: followerId,
+            created_at: asText(entry?.created_at),
+            follower,
+          }
+        })
+        .filter(Boolean)
     } catch (error) {
       this.captureError(error, 'Could not load follow requests')
       return []
@@ -118,7 +183,10 @@ export class SocialService extends ApiStateService {
 
   async approveFollowRequest(userId) {
     try {
-      await this.api.post(`/social/follow/requests/${userId}/approve`, {}, { token: this.token() })
+      await this.api.request(API_ENDPOINTS.SOCIAL_FOLLOW_REQUEST_APPROVE, {
+        params: { userId },
+        body: {},
+      })
       this.clearError()
       return true
     } catch (error) {
@@ -129,7 +197,10 @@ export class SocialService extends ApiStateService {
 
   async rejectFollowRequest(userId) {
     try {
-      await this.api.post(`/social/follow/requests/${userId}/reject`, {}, { token: this.token() })
+      await this.api.request(API_ENDPOINTS.SOCIAL_FOLLOW_REQUEST_REJECT, {
+        params: { userId },
+        body: {},
+      })
       this.clearError()
       return true
     } catch (error) {
@@ -140,7 +211,10 @@ export class SocialService extends ApiStateService {
 
   async blockUser(userId) {
     try {
-      await this.api.post(`/social/block/${userId}`, {}, { token: this.token() })
+      await this.api.request(API_ENDPOINTS.SOCIAL_BLOCK_USER, {
+        params: { userId },
+        body: {},
+      })
       this.clearError()
       return true
     } catch (error) {
@@ -151,7 +225,9 @@ export class SocialService extends ApiStateService {
 
   async unblockUser(userId) {
     try {
-      await this.api.delete(`/social/block/${userId}`, { token: this.token() })
+      await this.api.request(API_ENDPOINTS.SOCIAL_UNBLOCK_USER, {
+        params: { userId },
+      })
       this.clearError()
       return true
     } catch (error) {
@@ -162,9 +238,11 @@ export class SocialService extends ApiStateService {
 
   async blockedUsers() {
     try {
-      const data = await this.api.get('/social/blocked', { token: this.token() })
+      const data = await this.api.request(API_ENDPOINTS.SOCIAL_BLOCKED_LIST)
       this.clearError()
-      return Array.isArray(data) ? data.map((item) => normalizeUser(item)) : []
+      if (!Array.isArray(data)) return []
+      const ids = data.map((entry) => asText(entry?.user_id)).filter(Boolean)
+      return this._userProfilesByIds(ids)
     } catch (error) {
       this.captureError(error, 'Could not load blocked users')
       return []
@@ -173,9 +251,13 @@ export class SocialService extends ApiStateService {
 
   async followersOf(userId) {
     try {
-      const data = await this.api.get(`/social/followers/${userId}`, { token: this.token() })
+      const data = await this.api.request(API_ENDPOINTS.SOCIAL_FOLLOWERS_LIST, {
+        params: { userId },
+      })
       this.clearError()
-      return Array.isArray(data) ? data.map((item) => normalizeUser(item)) : []
+      if (!Array.isArray(data)) return []
+      const ids = data.map((entry) => asText(entry?.user_id)).filter(Boolean)
+      return this._userProfilesByIds(ids)
     } catch (error) {
       this.captureError(error, 'Could not load followers')
       return []
@@ -184,9 +266,13 @@ export class SocialService extends ApiStateService {
 
   async followingOf(userId) {
     try {
-      const data = await this.api.get(`/social/following/${userId}`, { token: this.token() })
+      const data = await this.api.request(API_ENDPOINTS.SOCIAL_FOLLOWING_LIST, {
+        params: { userId },
+      })
       this.clearError()
-      return Array.isArray(data) ? data.map((item) => normalizeUser(item)) : []
+      if (!Array.isArray(data)) return []
+      const ids = data.map((entry) => asText(entry?.user_id)).filter(Boolean)
+      return this._userProfilesByIds(ids)
     } catch (error) {
       this.captureError(error, 'Could not load following users')
       return []

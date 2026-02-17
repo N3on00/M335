@@ -6,8 +6,6 @@ import {
   subscriptionMatchesSpot,
 } from '../models/spotSubscriptions'
 
-const POLL_MS = 22000
-
 function userIdOf(entry) {
   return String(entry?.id || entry?.follower?.id || '').trim()
 }
@@ -21,7 +19,6 @@ function requestIdOf(entry) {
 export class ActivityWatchService {
   constructor(ctx) {
     this.ctx = ctx
-    this._timer = null
     this._busy = false
     this._seeded = false
     this._followerIds = new Set()
@@ -29,19 +26,10 @@ export class ActivityWatchService {
   }
 
   start() {
-    if (this._timer) return
     this._seeded = false
-    this._timer = setInterval(() => {
-      void this.tick({ notify: true })
-    }, POLL_MS)
-    void this.tick({ notify: false })
   }
 
   stop() {
-    if (this._timer) {
-      clearInterval(this._timer)
-      this._timer = null
-    }
     this._busy = false
     this._seeded = false
     this._followerIds.clear()
@@ -59,59 +47,72 @@ export class ActivityWatchService {
 
     this._busy = true
     try {
-      const social = app.controller('social')
       const spotsCtrl = app.controller('spots')
       const notifyService = app.service('notify')
 
-      const [followers, incomingRequests] = await Promise.all([
-        social.followersOf(meId),
-        social.incomingRequests(),
-      ])
+      try {
+        const social = app.controller('social')
+        const [followers, incomingRequests] = await Promise.all([
+          social.followersOf(meId),
+          social.incomingRequests(),
+        ])
 
-      const followerList = Array.isArray(followers) ? followers : []
-      const requestList = Array.isArray(incomingRequests) ? incomingRequests : []
+        const followerList = Array.isArray(followers) ? followers : []
+        const requestList = Array.isArray(incomingRequests) ? incomingRequests : []
 
-      app.state.social.followers = followerList
-      app.state.social.followersCount = followerList.length
-      app.state.social.incomingRequests = requestList
+        app.state.social.followers = followerList
+        app.state.social.followersCount = followerList.length
+        app.state.social.incomingRequests = requestList
 
-      const nextFollowerIds = new Set(followerList.map((entry) => userIdOf(entry)).filter(Boolean))
-      const nextRequestIds = new Set(requestList.map((entry) => requestIdOf(entry)).filter(Boolean))
+        const nextFollowerIds = new Set(followerList.map((entry) => userIdOf(entry)).filter(Boolean))
+        const nextRequestIds = new Set(requestList.map((entry) => requestIdOf(entry)).filter(Boolean))
 
-      if (notify && this._seeded) {
-        for (const follower of followerList) {
-          const fid = userIdOf(follower)
-          if (!fid || this._followerIds.has(fid)) continue
+        if (notify && this._seeded) {
+          for (const follower of followerList) {
+            const fid = userIdOf(follower)
+            if (!fid || this._followerIds.has(fid)) continue
 
-          const who = String(follower.display_name || follower.username || 'A user')
-          notifyService.push({
-            level: 'info',
-            title: 'New follower',
-            message: `${who} started following you.`,
-          })
+            const who = String(follower.display_name || follower.username || 'A user')
+            notifyService.push({
+              level: 'info',
+              title: 'New follower',
+              message: `${who} started following you.`,
+            })
+          }
+
+          for (const request of requestList) {
+            const rid = requestIdOf(request)
+            if (!rid || this._requestIds.has(rid)) continue
+
+            const who = String(request?.follower?.display_name || request?.follower?.username || 'A user')
+            notifyService.push({
+              level: 'info',
+              title: 'Follow request',
+              message: `${who} requested to follow you.`,
+            })
+          }
         }
 
-        for (const request of requestList) {
-          const rid = requestIdOf(request)
-          if (!rid || this._requestIds.has(rid)) continue
-
-          const who = String(request?.follower?.display_name || request?.follower?.username || 'A user')
-          notifyService.push({
-            level: 'info',
-            title: 'Follow request',
-            message: `${who} requested to follow you.`,
-          })
-        }
+        this._followerIds = nextFollowerIds
+        this._requestIds = nextRequestIds
+      } catch {
+        // Social activity polling is optional for subscription checks.
       }
-
-      this._followerIds = nextFollowerIds
-      this._requestIds = nextRequestIds
 
       const rawSubs = Array.isArray(app.state.map?.filterSubscriptions)
         ? app.state.map.filterSubscriptions
         : []
       const subscriptions = rawSubs
         .map((entry) => normalizeFilterSubscription(entry))
+        .filter(Boolean)
+        .map((entry) => {
+          const ownerUserId = String(entry.ownerUserId || '').trim() || meId
+          return {
+            ...entry,
+            ownerUserId,
+          }
+        })
+        .filter((entry) => String(entry?.ownerUserId || '').trim() === meId)
         .filter(Boolean)
 
       if (subscriptions.length) {
@@ -128,9 +129,8 @@ export class ActivityWatchService {
           const previousSnapshot = sub.snapshot || {}
 
           const { addedIds, changedIds } = diffSubscriptionSnapshot(previousSnapshot, nextSnapshot)
-          const hasPreviousSnapshot = Object.keys(previousSnapshot).length > 0
 
-          if (notify && this._seeded && hasPreviousSnapshot && (addedIds.length || changedIds.length)) {
+          if (notify && (addedIds.length || changedIds.length)) {
             const changeSummary = []
             if (addedIds.length) changeSummary.push(`${addedIds.length} new`)
             if (changedIds.length) changeSummary.push(`${changedIds.length} changed`)

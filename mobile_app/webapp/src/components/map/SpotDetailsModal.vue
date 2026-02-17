@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { toImageSource } from '../../models/imageMapper'
+import { markdownToPlainText } from '../../models/markdownMapper'
 import UserProfileCard from '../common/UserProfileCard.vue'
 import ActionButton from '../common/ActionButton.vue'
 import AppTextField from '../common/AppTextField.vue'
@@ -87,7 +88,7 @@ const ownerDetails = computed(() => {
   }
 
   const out = []
-  const bio = String(ownerProfile.value?.bio || '').trim()
+  const bio = markdownToPlainText(ownerProfile.value?.bio)
   if (bio) {
     out.push(bio.length > 90 ? `${bio.slice(0, 87)}...` : bio)
   }

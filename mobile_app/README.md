@@ -8,7 +8,15 @@ SpotOnSight is a map-based platform for discovering, saving, and sharing spots w
 - `webapp/` - Vue 3 + Vite frontend (**active client**)
 - `app/` - historical Python GUI prototype (kept for project evolution traceability)
 
-Evolution evidence:
+## Evolution and Rationale
+
+The repository contains both `app/` and `webapp/` because the project evolved in two phases:
+
+1. I started with a Python GUI approach to get a cross-platform client running quickly while my web/mobile stack knowledge was still limited.
+2. After learning Vue.js and modern hybrid-mobile packaging, I realized I could ship one frontend (`webapp/`) to browser + Android + iOS using a wrapper framework (Capacitor), so active development moved there.
+3. The Python GUI was then frozen as historical evidence, while all feature hardening continued in `webapp/`.
+
+Evidence anchors:
 
 - Python GUI start: commit `31f78df "mobile app starts"`
 - Web client introduction: commit `253bb95 "add Vue web client with auth, map, social, profile, and support flows"`
@@ -20,6 +28,8 @@ Evolution evidence:
 - Python 3.11+
 - Node.js 20+
 - MongoDB 7+ (or Docker)
+- Android Studio (for APK/AAB generation)
+- Xcode + CocoaPods on macOS (for iOS IPA/TestFlight)
 
 ## 1) Start Backend
 
@@ -52,6 +62,7 @@ Main backend environment variables:
 - `JWT_SECRET`
 - `JWT_ALGORITHM`
 - `JWT_EXPIRE_MINUTES`
+- `CORS_ORIGINS` (comma-separated, e.g. `https://app.example.com,https://admin.example.com`)
 
 ## 2) Start Web App (Active Client)
 
@@ -66,6 +77,34 @@ Production build:
 ```bash
 npm run build
 ```
+
+## 2b) Build Native Mobile Shells (Capacitor)
+
+Inside `webapp/`:
+
+```bash
+# one-time sanity check
+npm run mobile:doctor
+
+# Android
+# first time only
+npm run mobile:add:android
+
+# recurring sync/build prep
+npm run mobile:build:android
+
+# iOS (macOS only)
+# first time only
+npm run mobile:add:ios
+
+# recurring sync/build prep
+npm run mobile:build:ios
+```
+
+Notes:
+
+- Android release deliverables: APK (internal/sideload) and AAB (Play Store).
+- iOS release deliverable: IPA (TestFlight/App Store via Xcode signing).
 
 Optional `webapp/.env`:
 
@@ -94,15 +133,21 @@ python main.py
 
 ## Testing
 
-Current baseline includes documentation artifacts:
+Executed test artifacts:
 
 - Test concept: `docs/test-concept.md`
-- Test protocol template: `docs/test-protocol.md`
+- Executed test protocol: `docs/test-protocol.md`
 
-Planned automation baseline:
+Automation commands:
 
-- Backend smoke tests with `pytest` + `httpx`
-- Frontend smoke/e2e with `playwright` (and optional `vitest`)
+- Backend smoke tests: `python -m pytest backend/tests -q`
+- Frontend contract/resilience tests: `cd webapp && npm run test:run`
+- Frontend mobile integration tests: `cd webapp && npm run test:mobile`
+- Frontend production build validation: `cd webapp && npm run build`
+
+CI workflow:
+
+- `.github/workflows/ci.yml` runs backend smoke tests + frontend tests/build on push and pull requests.
 
 ## Documentation Index
 
@@ -113,6 +158,7 @@ Planned automation baseline:
 - ADRs: `docs/adr/`
 - UML specifications: `docs/uml-specifications.md`
 - Release checklist: `docs/release-checklist.md`
+- Mobile cross-platform plan: `docs/mobile-cross-platform-plan.md`
 
 ## Troubleshooting
 
