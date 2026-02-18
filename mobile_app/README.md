@@ -160,6 +160,7 @@ CI workflow:
 - UML specifications: `docs/uml-specifications.md`
 - Release checklist: `docs/release-checklist.md`
 - Mobile cross-platform plan: `docs/mobile-cross-platform-plan.md`
+- Reflection: `docs/reflection.md`
 
 ## Troubleshooting
 
