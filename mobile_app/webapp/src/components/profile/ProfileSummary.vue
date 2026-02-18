@@ -6,6 +6,7 @@ import SpotDetailsModal from '../map/SpotDetailsModal.vue'
 import SpotMiniCard from '../common/SpotMiniCard.vue'
 import ActionButton from '../common/ActionButton.vue'
 import AppMarkdownBlock from '../common/AppMarkdownBlock.vue'
+import AppLink from '../common/AppLink.vue'
 
 const props = defineProps({
   profile: { type: Object, default: null },
@@ -136,9 +137,15 @@ function editOwnProfile() {
             empty-text="No biography provided."
           />
           <div class="profile-social-links" v-if="socialEntries().length">
-            <a v-for="([key, value]) in socialEntries()" :key="`social-${key}`" :href="value" target="_blank" rel="noreferrer noopener">
+            <AppLink
+              v-for="([key, value]) in socialEntries()"
+              :key="`social-${key}`"
+              :href="value"
+              target="_blank"
+              rel="noreferrer noopener"
+            >
               <span class="profile-social-link__text">{{ socialLabel(key, value) }}</span>
-            </a>
+            </AppLink>
           </div>
           <div class="d-flex flex-wrap gap-2 mt-2" v-if="isOwnProfile">
             <ActionButton
