@@ -1,10 +1,4 @@
-function parseCoordinate(value) {
-  if (value === null || value === undefined) return null
-  if (typeof value === 'string' && value.trim() === '') return null
-
-  const out = Number(value)
-  return Number.isFinite(out) ? out : null
-}
+import { parseCoordinate } from '../utils/sanitizers'
 
 export function resolveGoToSpot(spot, currentZoom, minZoom = 14) {
   const lat = parseCoordinate(spot?.lat)

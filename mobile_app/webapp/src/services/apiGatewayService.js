@@ -1,9 +1,6 @@
 import { getApiEndpointBinding } from '../api/registry'
 import { ApiStateService } from './baseService'
-
-function asText(value) {
-  return String(value || '').trim()
-}
+import { asText } from '../utils/sanitizers'
 
 function buildPath(pathTemplate, params = {}) {
   const source = asText(pathTemplate)

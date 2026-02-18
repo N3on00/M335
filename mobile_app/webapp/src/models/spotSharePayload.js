@@ -1,10 +1,7 @@
-function asText(value) {
-  return String(value || '').trim()
-}
+import { asText, parseCoordinate } from '../utils/sanitizers'
 
 function asCoord(value) {
-  const out = Number(value)
-  return Number.isFinite(out) ? out : null
+  return parseCoordinate(value)
 }
 
 function deepLinkUrl(spot, origin = '') {

@@ -12,6 +12,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pymongo import ASCENDING
 from pymongo.errors import DuplicateKeyError
 
+from routing.admin_setup import get_current_admin_user
+
 from data.dto import (
     BlockRef,
     FavoriteRef,
@@ -904,15 +906,8 @@ def get_social_router() -> APIRouter:
         "/support/tickets/admin/all",
         response_model=list[SupportTicketPublic],
     )
-    def list_all_support_tickets(current_user: dict[str, Any] = Depends(get_current_user)):
+    def list_all_support_tickets(admin_user: dict = Depends(get_current_admin_user)):
         """Admin-only: List all support tickets across all users."""
-        from routing.admin_setup import is_admin_user
-        if not is_admin_user(current_user):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Admin access required",
-            )
-        
         cursor = repos.support_tickets.find().sort("created_at", -1)
         return [_to_support_ticket_public(doc) for doc in cursor]
 
@@ -923,15 +918,9 @@ def get_social_router() -> APIRouter:
     def update_ticket_status(
         ticket_id: str,
         status: str,
-        current_user: dict[str, Any] = Depends(get_current_user),
+        admin_user: dict = Depends(get_current_admin_user),
     ):
         """Admin-only: Update support ticket status (open/closed)."""
-        from routing.admin_setup import is_admin_user
-        if not is_admin_user(current_user):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Admin access required",
-            )
         
         if status not in ("open", "closed"):
             raise HTTPException(
@@ -965,16 +954,9 @@ def get_social_router() -> APIRouter:
     )
     def delete_ticket(
         ticket_id: str,
-        current_user: dict[str, Any] = Depends(get_current_user),
+        admin_user: dict = Depends(get_current_admin_user),
     ):
         """Admin-only: Delete a support ticket."""
-        from routing.admin_setup import is_admin_user
-        if not is_admin_user(current_user):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Admin access required",
-            )
-        
         if not ObjectId.is_valid(ticket_id):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

@@ -1,4 +1,15 @@
-function normalizeVisibility(value) {
+import {
+  asText,
+  sanitizeText,
+  sanitizeNumber,
+  sanitizeObject,
+  sanitizeArray,
+  normalizeVisibility,
+  tokenize,
+} from '../utils/sanitizers'
+
+
+function normalizeVisibilityLocal(value) {
   const out = String(value || '').trim().toLowerCase()
   if (out === 'public' || out === 'following' || out === 'invite_only' || out === 'personal') {
     return out
@@ -6,16 +17,12 @@ function normalizeVisibility(value) {
   return 'all'
 }
 
-function sanitizeText(value) {
-  return String(value || '').trim()
-}
-
 function sanitizeOwnerUserId(value) {
   return sanitizeText(value)
 }
 
 function sanitizeRadius(value) {
-  return Math.max(0, Number(value) || 0)
+  return Math.max(0, sanitizeNumber(value, 0))
 }
 
 function sanitizeSnapshot(value) {
@@ -55,7 +62,7 @@ function sanitizeFilters(filters) {
     text: sanitizeText(src.text),
     tagsText: sanitizeText(src.tagsText),
     ownerText: sanitizeText(src.ownerText),
-    visibility: normalizeVisibility(src.visibility),
+    visibility: normalizeVisibilityLocal(src.visibility),
     onlyFavorites: Boolean(src.onlyFavorites),
     radiusKm: sanitizeRadius(src.radiusKm),
   }
