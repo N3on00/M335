@@ -10,10 +10,10 @@
 ## Executed Commands and Results
 
 - `python -m pytest backend/tests -q`
-  - Result: `15 passed in 4.64s`
+  - Result: `58 passed in 3.15s`
 
 - `npm run test:run` (inside `webapp/`)
-  - Result: `18 test files passed, 102 tests passed`
+  - Result: `20 test files passed, 134 tests passed`
 
 - `npm run test:mobile` (inside `webapp/`)
   - Result: `4 test files passed, 10 tests passed`

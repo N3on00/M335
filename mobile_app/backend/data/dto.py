@@ -171,6 +171,7 @@ class AuthUserRecord(BaseModel):
     avatar_image: str = Field(default="", max_length=5_000_000)
     social_accounts: Dict[str, str] = Field(default_factory=dict)
     follow_requires_approval: bool = False
+    is_admin: bool = Field(default=False)
     created_at: Optional[datetime] = None
 
     @field_validator("username")

@@ -900,4 +900,94 @@ def get_social_router() -> APIRouter:
             )
         return _to_support_ticket_public(row)
 
+    @_SOCIAL_ROUTER.get(
+        "/support/tickets/admin/all",
+        response_model=list[SupportTicketPublic],
+    )
+    def list_all_support_tickets(current_user: dict[str, Any] = Depends(get_current_user)):
+        """Admin-only: List all support tickets across all users."""
+        from routing.admin_setup import is_admin_user
+        if not is_admin_user(current_user):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Admin access required",
+            )
+        
+        cursor = repos.support_tickets.find().sort("created_at", -1)
+        return [_to_support_ticket_public(doc) for doc in cursor]
+
+    @_SOCIAL_ROUTER.patch(
+        "/support/tickets/{ticket_id}/status",
+        response_model=SupportTicketPublic,
+    )
+    def update_ticket_status(
+        ticket_id: str,
+        status: str,
+        current_user: dict[str, Any] = Depends(get_current_user),
+    ):
+        """Admin-only: Update support ticket status (open/closed)."""
+        from routing.admin_setup import is_admin_user
+        if not is_admin_user(current_user):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Admin access required",
+            )
+        
+        if status not in ("open", "closed"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Status must be 'open' or 'closed'",
+            )
+        
+        if not ObjectId.is_valid(ticket_id):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid ticket ID",
+            )
+        
+        result = repos.support_tickets.update_one(
+            {"_id": ObjectId(ticket_id)},
+            {"$set": {"status": status, "updated_at": datetime.now(UTC)}},
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Ticket not found",
+            )
+        
+        row = repos.support_tickets.find_one({"_id": ObjectId(ticket_id)})
+        return _to_support_ticket_public(row)
+
+    @_SOCIAL_ROUTER.delete(
+        "/support/tickets/{ticket_id}",
+    )
+    def delete_ticket(
+        ticket_id: str,
+        current_user: dict[str, Any] = Depends(get_current_user),
+    ):
+        """Admin-only: Delete a support ticket."""
+        from routing.admin_setup import is_admin_user
+        if not is_admin_user(current_user):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Admin access required",
+            )
+        
+        if not ObjectId.is_valid(ticket_id):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid ticket ID",
+            )
+        
+        result = repos.support_tickets.delete_one({"_id": ObjectId(ticket_id)})
+        
+        if result.deleted_count == 0:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Ticket not found",
+            )
+        
+        return {"ok": True, "deleted": True}
+
     return _SOCIAL_ROUTER

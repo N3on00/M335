@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import os
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routing.auth_routes import get_auth_router
+from routing.auth_routes import get_auth_router, get_auth_user_repository
 from routing.social_routes import get_social_router
 from routing.registry import get_routers
+from routing.admin_setup import ensure_admin_user
 
 
 def _cors_origins() -> list[str]:
@@ -27,6 +29,19 @@ def _cors_origins() -> list[str]:
     return origins
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup and shutdown lifecycle handler."""
+    print("[STARTUP] Ensuring admin user exists...")
+    try:
+        admin_repo = get_auth_user_repository()
+        ensure_admin_user(admin_repo)
+    except Exception as e:
+        print(f"[STARTUP] Warning: Could not ensure admin user: {e}")
+    yield
+    print("[SHUTDOWN] Application shutting down...")
+
+
 class Routing:
     """FastAPI app builder.
 
@@ -35,7 +50,7 @@ class Routing:
     """
 
     def __init__(self) -> None:
-        self._app = FastAPI()
+        self._app = FastAPI(lifespan=lifespan)
         self._app.add_middleware(
             CORSMiddleware,
             allow_origins=_cors_origins(),
