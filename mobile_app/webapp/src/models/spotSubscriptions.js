@@ -68,14 +68,6 @@ function sanitizeFilters(filters) {
   }
 }
 
-function tokenize(text) {
-  return String(text || '')
-    .toLowerCase()
-    .split(/[\s,]+/)
-    .map((part) => part.trim())
-    .filter(Boolean)
-}
-
 function distanceKm(latA, lonA, latB, lonB) {
   const dLat = (latB - latA) * (Math.PI / 180)
   const dLon = (lonB - lonA) * (Math.PI / 180)
