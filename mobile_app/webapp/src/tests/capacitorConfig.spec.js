@@ -1,10 +1,13 @@
 import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, resolve } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
 function readCapacitorConfig() {
-  const url = new URL('../../capacitor.config.json', import.meta.url)
-  return JSON.parse(readFileSync(url, 'utf8'))
+  const baseDir = dirname(fileURLToPath(import.meta.url))
+  const configPath = resolve(baseDir, '../../capacitor.config.json')
+  return JSON.parse(readFileSync(configPath, 'utf8'))
 }
 
 describe('Capacitor config contract', () => {
