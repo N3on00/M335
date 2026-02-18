@@ -945,18 +945,19 @@ def get_social_router() -> APIRouter:
                 detail="Invalid ticket ID",
             )
         
-        result = repos.support_tickets.update_one(
+        repos.support_tickets.update_fields(
             {"_id": ObjectId(ticket_id)},
-            {"$set": {"status": status, "updated_at": datetime.now(UTC)}},
+            {"status": status, "updated_at": datetime.now(UTC)},
         )
         
-        if result.matched_count == 0:
+        row = repos.support_tickets.find_one({"_id": ObjectId(ticket_id)})
+        
+        if not row:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Ticket not found",
             )
         
-        row = repos.support_tickets.find_one({"_id": ObjectId(ticket_id)})
         return _to_support_ticket_public(row)
 
     @_SOCIAL_ROUTER.delete(
