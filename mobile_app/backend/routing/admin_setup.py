@@ -4,11 +4,9 @@ import os
 from datetime import UTC, datetime
 
 from bson import ObjectId
-from pymongo import ASCENDING
 
-from data.mongo_repository import MongoRepository
 from data.dto import AuthUserRecord
-from routing.auth_routes import password_extension
+from routing.auth_routes import password_extension, get_auth_user_repository
 
 
 ADMIN_DEFAULT_USERNAME = os.getenv("ADMIN_USERNAME", "admin").strip().lower()
@@ -17,15 +15,17 @@ ADMIN_DEFAULT_EMAIL = os.getenv("ADMIN_EMAIL", "admin@spotonsight.app").strip().
 ADMIN_DEFAULT_DISPLAY = os.getenv("ADMIN_DISPLAY", "System Administrator").strip()
 
 
-def ensure_admin_user(repository: MongoRepository) -> dict | None:
+def ensure_admin_user() -> dict | None:
     """Create admin user if it doesn't exist. Returns the admin user document or None."""
     
+    repository = get_auth_user_repository()
     existing = repository.find_one({"username": ADMIN_DEFAULT_USERNAME})
+    
     if existing:
         if not existing.get("is_admin", False):
-            repository.update_one(
+            repository.update_fields(
                 {"_id": existing["_id"]},
-                {"$set": {"is_admin": True}}
+                {"is_admin": True}
             )
             existing["is_admin"] = True
         return existing
@@ -56,12 +56,3 @@ def ensure_admin_user(repository: MongoRepository) -> dict | None:
 def is_admin_user(user_doc: dict) -> bool:
     """Check if a user document represents an admin."""
     return bool(user_doc.get("is_admin", False))
-
-
-def get_admin_repository() -> MongoRepository:
-    """Get the auth repository for admin operations."""
-    return MongoRepository(
-        collection_name="users",
-        model_type=AuthUserRecord,
-        db_name="SpotOnSightAuth",
-    )

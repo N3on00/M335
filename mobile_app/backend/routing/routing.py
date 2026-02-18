@@ -34,8 +34,7 @@ async def lifespan(app: FastAPI):
     """Startup and shutdown lifecycle handler."""
     print("[STARTUP] Ensuring admin user exists...")
     try:
-        admin_repo = get_auth_user_repository()
-        ensure_admin_user(admin_repo)
+        ensure_admin_user()
     except Exception as e:
         print(f"[STARTUP] Warning: Could not ensure admin user: {e}")
     yield
